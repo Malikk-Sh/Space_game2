@@ -985,7 +985,8 @@ function startTinaBattle(G){
   G.notif='ФАЗА 1: СЛОМАЙ 3 ЭНЕРГОБЛОКА!';G.notifT=200;G.notifCol=P.CYA;
   // ★ v16: Брифинг пришельца — подсказка по фазе 1
   G.briefing={t:0,planet:'tina_phase1'};
-  shake(6);flash(.5,P.TINA2);sfxBoss();
+  // ★ Эпичный «дроп» при появлении Тины
+  shake(10);flash(.6,P.TINA2);sfxBoss();hitStopAdd(4);
   TAP_FIRE=true;
 }
 

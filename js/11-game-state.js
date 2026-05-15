@@ -43,6 +43,29 @@ function drwPauseOverlay(G){
   rc(px-2,py-2,pw+4,ph+4,P.PUR);
   rc(px,py,pw,ph,'#0a0418');
   rc(px+1,py+1,pw-2,ph-2,'#150828');
+
+  // ★ Подтверждение выхода в меню — отдельный экран поверх обычных опций
+  if(G._pauseConfirmExit){
+    txcs('ВЫЙТИ В МЕНЮ?',py+24,P.RED,P.BLK,2);
+    txcs('ВЕСЬ ПРОГРЕСС БУДЕТ ПОТЕРЯН',py+50,P.UIT2,P.BLK,1);
+    // Две кнопки: ДА / НЕТ
+    const opts=[{label:'ОТМЕНА', col:P.GRN},{label:'ВЫЙТИ', col:P.RED}];
+    G._pauseHits=[];
+    for(let i=0;i<opts.length;i++){
+      const o=opts[i];
+      const ow=70, oh=14;
+      const ox=px+(pw/2)-ow-6+i*(ow+12), oy=py+78;
+      const sel=(G.pauseSel===i);
+      const hover=(mX>=ox&&mX<=ox+ow&&mY>=oy&&mY<=oy+oh);
+      if(sel||hover){rc(ox,oy,ow,oh,sel?'#2a1054':'#1a0838');}
+      const lblW=gw(o.label);
+      txt(o.label,ox+(ow-lblW)/2,oy+4,sel?P.WHT:o.col,1);
+      G._pauseHits.push({x:ox,y:oy,w:ow,h:oh,idx:i,confirm:true});
+    }
+    txcs(USE_TOUCH_UI?'ТАП - ВЫБРАТЬ':'СТРЕЛКИ / ENTER / ESC - ОТМЕНА',py+ph-10,P.UIT2,P.BLK,1);
+    return;
+  }
+
   // Заголовок
   txcs('ПАУЗА',py+8,P.YEL,P.BLK,2);
   ring(LW/2-30,py+11,3,P.YEL,1);ring(LW/2+30,py+11,3,P.YEL,1);
@@ -78,6 +101,22 @@ function drwPauseOverlay(G){
   // Подсказка
   txcs(USE_TOUCH_UI?'ТАП - ВЫБРАТЬ':'СТРЕЛКИ / ENTER / ESC',py+ph-10,P.UIT2,P.BLK,1);
 }
+
+// ★ Завершает выход в главное меню (вызывается после подтверждения)
+function _finalizePauseExit(G){
+  G.paused=false;
+  G._pauseConfirmExit=false;
+  sfxUI2();
+  startTrans(()=>{
+    const fresh=newGame();
+    for(const k in G){if(G.hasOwnProperty(k))delete G[k];}
+    Object.assign(G,fresh);
+    window.G=G;
+    resetBtns();
+    initTitle(G);
+  });
+}
+
 function executePauseOption(G,idx){
   switch(idx){
     case 0: G.paused=false; sfxUI2(); break;
@@ -86,32 +125,53 @@ function executePauseOption(G,idx){
     case 3: cycleMusicTrack(G); break;
     case 4: toggleFullscreen(); sfxUI(); break;
     case 5:
-      G.paused=false;
-      sfxUI2();
-      startTrans(()=>{
-        const fresh=newGame();
-        for(const k in G){if(G.hasOwnProperty(k))delete G[k];}
-        Object.assign(G,fresh);
-        window.G=G;
-        resetBtns();
-        initTitle(G);
-      });
+      // ★ Не выходим сразу — открываем подтверждение
+      G._pauseConfirmExit=true;
+      G.pauseSel=0;  // по умолчанию выбрана ОТМЕНА
+      sfxUI();
       break;
   }
 }
+
 function handlePauseInput(G){
   // Переключение паузы (но не во время переходов или диалогов)
   const canToggle=!G.transIn && !G.transOut && !G.dlg;
   if(canToggle){
     if(KD.Escape || KD.KeyP || pauseIconClicked()){
+      // Если открыто подтверждение — Escape закрывает его, не саму паузу
+      if(G.paused && G._pauseConfirmExit){
+        G._pauseConfirmExit=false;G.pauseSel=5;sfxUI();mC=false;return;
+      }
       G.paused=!G.paused;
       G.pauseSel=0;
+      G._pauseConfirmExit=false;
       sfxUI();
       mC=false; // чтобы клик по иконке не проваливался дальше
       return;
     }
   }
   if(G.paused){
+    if(G._pauseConfirmExit){
+      // Навигация в подтверждении (0=ОТМЕНА, 1=ВЫЙТИ)
+      if(KD.ArrowLeft||KD.ArrowRight||KD.ArrowUp||KD.ArrowDown||KD.KeyA||KD.KeyD||KD.KeyW||KD.KeyS){
+        G.pauseSel=1-G.pauseSel;sfxUI();
+      }
+      if(KD.Enter||KD.Space){
+        if(G.pauseSel===0){G._pauseConfirmExit=false;G.pauseSel=5;sfxUI();}
+        else _finalizePauseExit(G);
+      }
+      if(mC && G._pauseHits){
+        for(const h of G._pauseHits){
+          if(mX>=h.x&&mX<=h.x+h.w&&mY>=h.y&&mY<=h.y+h.h){
+            G.pauseSel=h.idx;
+            if(h.idx===0){G._pauseConfirmExit=false;G.pauseSel=5;sfxUI();}
+            else _finalizePauseExit(G);
+            mC=false;break;
+          }
+        }
+      }
+      return;
+    }
     // Навигация
     if(KD.ArrowUp||KD.KeyW){G.pauseSel=(G.pauseSel+5)%6;sfxUI();}
     if(KD.ArrowDown||KD.KeyS){G.pauseSel=(G.pauseSel+1)%6;sfxUI();}
