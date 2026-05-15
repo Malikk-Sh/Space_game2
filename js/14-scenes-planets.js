@@ -346,6 +346,16 @@ function drwPlanetDrosh(G){
     if(dx*dx+dy*dy<400){cx.globalAlpha=.5+.3*Math.sin(G.sT*.2);ring(gx,gy-1,8,P.CYA,1);cx.globalAlpha=1;}
   }
   if(G.droshSide){
+    // ★ Найдём ближайший НЕзажжённый маяк (для стрелки-указателя)
+    let nearestUnlit=null, nearestDist=Infinity;
+    if(G.droshSide.questAccepted){
+      for(const b of G.droshSide.beacons){
+        if(b.fixed)continue;
+        const d=Math.hypot(b.x-G.pc.x,b.y-G.pc.y);
+        if(d<nearestDist){nearestDist=d;nearestUnlit=b;}
+      }
+    }
+
     for(const b of G.droshSide.beacons){
       b.t=(b.t||0)+.06;const bx=b.x|0,by=b.y|0;const hot=b.fixed;
       cx.fillStyle='rgba(0,0,0,0.3)';cx.fillRect(bx-4,by+6,9,2);
@@ -353,14 +363,41 @@ function drwPlanetDrosh(G){
       cx.globalAlpha=hot?.45:.18;disc(bx,by-12,hot?10:5,hot?P.YEL:P.CYA);cx.globalAlpha=1;
       // Пламя
       if(hot){const flick=0.7+0.3*Math.sin(t*0.4+bx);cx.globalAlpha=flick*0.8;rc(bx-1,by-14,3,3,P.YEL);cx.globalAlpha=flick*0.5;rc(bx,by-16,1,2,P.WHT);cx.globalAlpha=1;}
+
+      // ★ Маркер незажжённого маяка — пульсирующее жёлтое кольцо над ним
+      //   (только после принятия квеста, чтобы не спойлерить до диалога)
+      if(!hot&&G.droshSide.questAccepted){
+        const pulse=.5+.5*Math.sin(t*.18+bx*.1);
+        cx.globalAlpha=.4+.4*pulse;
+        ring(bx,by-22,3+pulse,P.YEL,1);
+        cx.globalAlpha=.7+.3*pulse;
+        rc(bx-1,by-23,3,1,P.YEL);rc(bx,by-24,1,3,P.YEL);  // мини-крестик внутри
+        cx.globalAlpha=1;
+      }
+
       // Подсказка "ЗАЖЕЧЬ" показывается только если квест уже принят.
-      // До принятия квеста маяк есть на карте, но без интерактивного промпта.
       if(!hot&&G.droshSide.questAccepted&&Math.abs(G.pc.x-b.x)<16&&Math.abs(G.pc.y-b.y)<16&&Math.floor(t/18)%2){
         const lbl=USE_TOUCH_UI?'* ЗАЖЕЧЬ':'E ЗАЖЕЧЬ';
         const w=gw(lbl)+4;
         bx2(bx-w/2,by-25,w,10,P.YEL,P.WHT,1);
         txt(lbl,bx-w/2+2,by-23,P.BLK,1);
       }
+    }
+
+    // ★ Стрелка-указатель на ближайший незажжённый маяк, если он далеко
+    if(nearestUnlit && nearestDist>34){
+      const ang=Math.atan2(nearestUnlit.y-G.pc.y, nearestUnlit.x-G.pc.x);
+      const r=14+2*Math.sin(t*.2);  // пульсация
+      const ax=G.pc.x+Math.cos(ang)*r;
+      const ay=G.pc.y+Math.sin(ang)*r-6;
+      cx.globalAlpha=.85;
+      // треугольник-стрелка
+      const ca=Math.cos(ang),sa=Math.sin(ang);
+      const _tri=(dx,dy)=>{const x=ax+dx*ca-dy*sa,y=ay+dx*sa+dy*ca;cx.fillRect(x|0,y|0,1,1);};
+      cx.fillStyle=P.YEL;
+      for(let i=0;i<5;i++){_tri(i,0);_tri(i-1,1);_tri(i-1,-1);}
+      _tri(4,0);_tri(3,1);_tri(3,-1);_tri(2,2);_tri(2,-2);
+      cx.globalAlpha=1;
     }
   }
   for(const n of G.npcs)drwNPC(n,G.pc.x,G.pc.y,t*1.2);drwPC(G.pc,t);

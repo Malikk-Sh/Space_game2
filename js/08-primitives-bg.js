@@ -11,7 +11,22 @@ function initStars(){STARS.length=0;const sp=[.05,.18,.45,.9],cl=[P.S4,P.S3,P.S2
 const _STAR_PAR=[0.08,0.28,0.62,1.0];
 function scrollStars(m=1){for(const s of STARS){s.x-=s.sp*m*_STAR_PAR[s.l];if(s.x<0){s.x=LW;s.y=Math.random()*LH;}s.tw+=s.twSp;}for(const n of NEBULA){n.x-=n.sp*m;if(n.x<-40){n.x=LW+40;n.y=Math.random()*LH;}}}
 function drwNebula(){for(const n of NEBULA){for(let r=n.r|0;r>2;r-=2){const al=n.a*(1-(n.r-r)/n.r)*.55;cx.globalAlpha=al;cx.fillStyle=n.col;const ry=Math.max(1,(r*.7)|0);for(let dy=-ry;dy<=ry;dy++){const w=Math.sqrt(1-(dy/ry)*(dy/ry))*r|0;cx.fillRect((n.x-w)|0,(n.y+dy)|0,w*2,1);}}}cx.globalAlpha=1;}
-function drwStars(){for(const s of STARS){if(s.l>=2){const tw=.6+.4*Math.sin(s.tw);cx.globalAlpha=tw;}cx.fillStyle=s.col;cx.fillRect(s.x|0,s.y|0,1,1);if(s.l===3&&Math.sin(s.tw)>.7){cx.fillRect((s.x-1)|0,s.y|0,1,1);cx.fillRect((s.x+1)|0,s.y|0,1,1);cx.fillRect(s.x|0,(s.y-1)|0,1,1);cx.fillRect(s.x|0,(s.y+1)|0,1,1);}cx.globalAlpha=1;}}
+function drwStars(){
+  // ★ Мерцание на всех слоях: дальние (l=0..1) мерцают мягко, ближние (l=2..3) — сильнее.
+  // _twAmp задаёт глубину пульсации; lower layers едва пульсируют, upper — заметно.
+  const _twAmp=[0.15, 0.22, 0.35, 0.45];
+  for(const s of STARS){
+    const a=1-_twAmp[s.l]+_twAmp[s.l]*Math.sin(s.tw)*0.5+0.5*_twAmp[s.l];
+    cx.globalAlpha=Math.min(1,Math.max(0.35,a));
+    cx.fillStyle=s.col;
+    cx.fillRect(s.x|0,s.y|0,1,1);
+    if(s.l===3&&Math.sin(s.tw)>.7){
+      cx.fillRect((s.x-1)|0,s.y|0,1,1);cx.fillRect((s.x+1)|0,s.y|0,1,1);
+      cx.fillRect(s.x|0,(s.y-1)|0,1,1);cx.fillRect(s.x|0,(s.y+1)|0,1,1);
+    }
+    cx.globalAlpha=1;
+  }
+}
 
 function disc(dcx,dcy,r,col){cx.fillStyle=col;for(let dy=-r;dy<=r;dy++){const w=Math.sqrt(r*r-dy*dy)|0;cx.fillRect((dcx-w)|0,(dcy+dy)|0,w*2,1);}}
 function ring(dcx,dcy,r,col,th=1){cx.strokeStyle=col;cx.lineWidth=th;cx.beginPath();cx.arc(dcx,dcy,r,0,Math.PI*2);cx.stroke();}

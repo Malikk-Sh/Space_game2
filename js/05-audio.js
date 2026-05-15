@@ -178,8 +178,8 @@ function sfxShield() {
   bip(900, .1,  .05, 'sine',     700, 1000);
 }
 
-// Случайный «писк» во время печати реплики.
-function sfxDlg() { if (AC) bip(800 + Math.random() * 200, .02, .04, 'square'); }
+// Мягкий «писк» во время печати реплики — sine вместо square, тише и ниже.
+function sfxDlg() { if (AC) bip(550 + Math.random() * 100, .025, .03, 'sine'); }
 
 function sfxBoss() {
   if (!AC) return;

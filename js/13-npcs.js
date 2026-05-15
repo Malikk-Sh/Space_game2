@@ -213,7 +213,8 @@ function drwNPC(n,pcx,pcy,t){
   const walkPhase=npcCanWalk&&n._wWait<=0;
   // Blab бежит — быстрее анимация ног и подскок
   const legCycle=isRunner?5:8;
-  const legOff=walkPhase?(Math.floor(t/legCycle)%2)*(isRunner?3:2):0;
+  // ★ Увеличенная амплитуда шага: раньше ±3/±2 — почти незаметно. Теперь шаг хорошо виден.
+  const legOff=walkPhase?(Math.floor(t/legCycle)%2)*(isRunner?5:4):0;
   // Подскок при беге
   const runBob=(walkPhase&&isRunner)?Math.sin(t*0.4)*1:0;
   const x=n.x|0;

@@ -359,7 +359,8 @@ function updSpace(G){
   if(p.hp<=0){
     spPts(p.x,p.y,34,[P.SH1,P.TH1,P.WHT,P.L1],1,5.5,50,.06,2);
     addShockwave(p.x,p.y,40,P.WHT,25);
-    sfxX(3);flash(.9,P.WHT);shake(10);
+    // ★ Усиленный финальный удар при гибели корабля игрока
+    sfxX(3);flash(.95,P.WHT);shake(16);hitStopAdd(6);
     G.state='gameover';G.goT=0;resetBtns();
     return;
   }
