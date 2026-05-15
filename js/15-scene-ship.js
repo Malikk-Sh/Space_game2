@@ -1008,6 +1008,7 @@ function startTinaBattle(G){
     x:G.finale.hx,y:G.finale.hy,
     hp:750,mhp:750,
     phase:1,
+    subphase:'1',  // ★ Phase 2.3: '1' | '1.5' | '2' | '2.5' | '3' | '3.5' | '4'
     t:0,defeated:false,
     shootCD:100,
     reflectFlash:0,
@@ -1023,9 +1024,11 @@ function startTinaBattle(G){
     droneCD:0,
     attackPattern:0,
     chargingSweep:null,
-    chargeDrones:[],   // ★ v24b: атака сближения — 3 дрона сходятся на игрока
-    sweepBeam:null,    // ★ v24b: движущийся луч
+    chargeDrones:[],
+    sweepBeam:null,
     phase4entered:false,
+    // ★ Phase 2.3: чекпоинт-точки между фазами (см. 02-checkpoint.js)
+    _subphaseTriggered:{},
   };
   G.notif='ФАЗА 1: СЛОМАЙ 3 ЭНЕРГОБЛОКА!';G.notifT=200;G.notifCol=P.CYA;
   // ★ v16: Брифинг пришельца — подсказка по фазе 1
@@ -1049,23 +1052,83 @@ function spawnTinaTurrets(T){
   }
 }
 
-function spawnTinaWeakSpots(T){
-  // ★ v16 r4 #1: Слабые точки = БРЕШИ в защитном щите Тины
-  // Каждая брешь — угловая дуга, медленно вращающаяся вокруг Тины.
-  // Игрок может стрелять прямо через брешь, пуля долетит до тела Тины.
-  // Стрельба в участки щита БЕЗ бреши — отражение.
+// ★ Phase 2.3: spawnTinaWeakSpots теперь принимает count (1, 2 или 3) для плавного градиента сложности.
+//   Фаза 3 = 1 брешь, фаза 3.5 = 2 бреши, фаза 4 = 3 бреши + rage.
+function spawnTinaWeakSpots(T,count){
+  count=count||1;
   T.weakSpots=[];
-  for(let i=0;i<3;i++){
-    const a=i/3*Math.PI*2;
+  // Изначальная скорость вращения для фазы 3 — медленная (0.005). Ускоряется в 3.5/4.
+  const initSpd=0.005;
+  for(let i=0;i<count;i++){
+    const a=i/count*Math.PI*2;
     T.weakSpots.push({
       orbitA:a,                    // центральный угол бреши
-      arcWidth:0.15,               // ★ r12 #3: бреши в 3× меньше (0.45→0.15, ~9 градусов)
+      arcWidth:0.18,               // дуга бреши (~10 градусов)
       orbitR:TINA_R+18,            // радиус щита (для отрисовки бреши)
-      orbitSpd:0.006,              // вращение бреши
+      orbitSpd:initSpd,            // ★ Phase 2.3: медленнее в фазе 3 (0.005), ускоряется в 3.5/4
       t:0,
-      x:0,y:0,                     // экранные коорды (вычисляются для эффектов)
-      facing:false,                // вычисляется: смотрит ли брешь в сторону игрока
+      x:0,y:0,
+      facing:false,
     });
   }
+}
+
+// ★ Phase 2.3: восстановление боя с Тиной с указанной фазы (для чекпоинтов finale_phase_N).
+//   Используется в gameover-перезапуске вместо initFinaleTina+startTinaBattle с нуля.
+function restoreFinalePhase(G,targetPhase,targetHp){
+  initFinaleTina(G);
+  const F=G.finale;
+  // Пропускаем кинематик-катсцену — сразу в бой
+  F.cinematic.phase='battle';
+  F.cinematic.t=0;
+  F.cinematic.started=false;
+  startTinaBattle(G);
+  const T=F.tina;
+  // Перенастраиваем Тину под нужную фазу
+  T.phase=targetPhase;
+  T.hp=Math.max(1,targetHp||T.mhp*0.7);
+  if(targetPhase===2){
+    T.subphase='2';
+    for(const eb of T.energyBlocks)eb.alive=false;
+    spawnTinaTurrets(T);
+    T.droneCD=99999;
+    G.briefing={t:0,planet:'tina_phase2'};
+  } else if(targetPhase===3){
+    T.subphase='3';
+    for(const eb of T.energyBlocks)eb.alive=false;
+    T.turrets=[];
+    spawnTinaWeakSpots(T,1);
+    G.briefing={t:0,planet:'tina_phase3'};
+  } else if(targetPhase===4){
+    T.subphase='4';
+    T.phase4entered=true;
+    for(const eb of T.energyBlocks)eb.alive=false;
+    T.turrets=[];
+    spawnTinaWeakSpots(T,3);
+    for(const ws of T.weakSpots)ws.orbitSpd=0.013;
+    T.droneCD=80;
+    T.shootCD=40;
+    G.briefing={t:0,planet:'tina_phase4'};
+  }
+  G.notif='ВОЗВРАТ В ФАЗУ '+targetPhase;G.notifT=120;G.notifCol=P.CYA;
+}
+
+// ★ Phase 2.3: добавляет одну дополнительную брешь к существующим (для переходов 3→3.5, 3.5→4).
+//   Распределяет углы равномерно с учётом существующих.
+function addTinaWeakSpot(T){
+  const n=T.weakSpots.length;
+  if(n>=3)return;
+  // Берём текущую среднюю скорость, чтобы новая брешь не «выпала» из ритма
+  const spd=n>0?T.weakSpots[0].orbitSpd:0.005;
+  const a=(T.weakSpots[n-1]?T.weakSpots[n-1].orbitA:0)+Math.PI*2/(n+1);
+  T.weakSpots.push({
+    orbitA:a,
+    arcWidth:0.18,
+    orbitR:TINA_R+18,
+    orbitSpd:spd,
+    t:0,
+    x:0,y:0,
+    facing:false,
+  });
 }
 
