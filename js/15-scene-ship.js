@@ -47,6 +47,11 @@ function updShip(G){
     if(G.state==='planet_drosh'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);}
     else if(G.state==='planet_bubblika'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);addBtn('jump',LW-20,LH-48,12,'J',P.CYA);}
     else if(G.state==='planet_krasnozem'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);}
+    else if(G.state==='space'){
+      // ★ Phase 2.4: возврат в космос с сохранённым состоянием полёта
+      TAP_FIRE=true;ALLOW_JOY=true;
+      if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}
+    }
     else if(G.state==='finale_tina'){addBtn('w1',LW-52,LH-22,11,'1',P.L1);addBtn('w2',LW-28,LH-22,11,'2',P.L3);}
     return;
   });}
@@ -79,6 +84,14 @@ function updShip(G){
     if(hits){
       for(const h of hits){
         if(mX>=h.x&&mX<=h.x+h.w&&mY>=h.y&&mY<=h.y+h.h){
+          // ★ Phase 2.4: клик по +/- — переназначение рабочего
+          if(h.workerAction){
+            const ok=reallocWorkers(G,h.workerRoom,h.workerAction==='plus'?+1:-1);
+            if(ok){sfxUI();fText(h.x+h.w/2,h.y+12,h.workerAction==='plus'?'+1':'-1',P.EN);}
+            else{sfxHit();fText(h.x+h.w/2,h.y+12,'X',P.RED);}
+            mC=false;
+            break;
+          }
           sfxUI2();
           if(h.action){h.action(G);fText(h.x+h.w/2,h.y+12,'OK',h.col);}
           else{fText(h.x+h.w/2,h.y+12,'INFO',h.col);G.notif=h.notif;G.notifT=120;G.notifCol=h.col;}
@@ -281,6 +294,8 @@ function drwShipView(G){
   // ★ Phase 2.2: верстак теперь даёт 4 новых оружия в дополнение к Л2 и Щиту.
   //   Stop-gap acquisition: пока нет квестов на Бубблике/Краснозёме — все оружия покупаются здесь.
   const cr=G.pl.cr, mat=G.campaignState.materials||0;
+  // ★ Phase 2.4: фильтруем уже стоящие в очереди — не предлагаем их повторно
+  const _queuedIds=new Set((G.ship&&G.ship.craftQueue?G.ship.craftQueue:[]).map(c=>c.id));
   const _workshopItems=[
     {unbuilt:inv.laserBlueprint&&!inv.laserStrong, label:'Л2',     short:'Л2',     cost:90,  matCost:0, id:'l2'},
     {unbuilt:inv.bubblikaContract&&!inv.shieldBuilt, label:'ЩИТ',  short:'ЩИТ',    cost:60,  matCost:0, id:'shield'},
@@ -289,7 +304,7 @@ function drwShipView(G){
     {unbuilt:!inv.beamUnlocked,    label:'ЛУЧ',    short:'ЛУЧ',    cost:120, matCost:2, id:'beam'},
     {unbuilt:!inv.burstUnlocked,   label:'БЁРСТ',  short:'БЁРСТ',  cost:150, matCost:3, id:'burst'},
   ];
-  const _workshopNext=_workshopItems.find(i=>i.unbuilt);
+  const _workshopNext=_workshopItems.find(i=>i.unbuilt&&!_queuedIds.has(i.id));
   let workshopHint='';
   let workshopStatus='info';
   if(_workshopNext){
@@ -306,12 +321,17 @@ function drwShipView(G){
 
   const fuelStatus=G.pl.res>=FEED_COST?'ready':'need';
 
+  // ★ Phase 2.4: per-room worker counts для подсказок и +/- кнопок
+  ensureShipWorkers(G);
+  const _w=G.ship.workers;
   const rooms=[
     {col:0,row:0,id:'power',name:'ЭЛЕКТРОСТАНЦИЯ',col2:P.EN,
-     hint:'РАБОЧИХ: '+G.pl.workers, status:'info',
+     hint:'РАБ '+_w.power+'/'+G.pl.workers+' (+'+(_w.power*0.18).toFixed(2)+' EN)',
+     status:'info',workerRoom:'power',
      action:null, notif:'РАБОЧИЕ ВЫРАБАТЫВАЮТ ЭНЕРГИЮ. БОЛЬШЕ РАБОЧИХ - БЫСТРЕЕ.'},
     {col:1,row:0,id:'fuel',name:'ТОПЛИВО',col2:P.RES,
-     hint:FEED_COST+' РЕС => +'+FEED_FUEL+'%', status:fuelStatus,
+     hint:FEED_COST+' РЕС=>'+FEED_FUEL+'% | РАБ '+_w.fuel+' (-'+(_w.fuel*5)+'% расхода)',
+     status:fuelStatus,workerRoom:'fuel',
      action:(G)=>{
        if(G.pl.res>=FEED_COST){
          G.pl.res-=FEED_COST;G.ship.fuel=Math.min(100,G.ship.fuel+FEED_FUEL);
@@ -323,75 +343,51 @@ function drwShipView(G){
      },
      notif:'ЗАПРАВКА КОРАБЛЯ ТОПЛИВОМ.'},
     {col:0,row:1,id:'workshop',name:'ВЕРСТАК',col2:P.GRN,
-     hint:workshopHint, status:workshopStatus,
+     hint:(G.ship.craftQueue&&G.ship.craftQueue.length>0
+       ? G.ship.craftQueue[0].short+' '+((G.ship.craftQueue[0].progress/G.ship.craftQueue[0].total*100)|0)+'% | РАБ '+_w.workshop
+       : workshopHint),
+     status:workshopStatus,workerRoom:'workshop',
      action:(G)=>{
+       // ★ Phase 2.4: тап → ставим в очередь крафта (вместо мгновенной сборки).
+       //   Прогресс продвигается в полёте по количеству рабочих в Workshop.
        const inv2=G.campaignState.inventory;
+       // Защита от двойной очереди одинаковых предметов
+       ensureShipWorkers(G);
+       const queued=new Set((G.ship.craftQueue||[]).map(c=>c.id));
        const items=[
-         {unbuilt:inv2.laserBlueprint&&!inv2.laserStrong, label:'ЛАЗЕР', short:'Л2', cost:90, matCost:0, id:'l2'},
-         {unbuilt:inv2.bubblikaContract&&!inv2.shieldBuilt, label:'ЩИТ', short:'ЩИТ', cost:60, matCost:0, id:'shield'},
-         {unbuilt:!inv2.spreadUnlocked,  label:'СПРЕД',  short:'СПРЕД',  cost:50,  matCost:1, id:'spread'},
-         {unbuilt:!inv2.missileUnlocked, label:'РАКЕТА', short:'РАКЕТА', cost:80,  matCost:2, id:'missile'},
-         {unbuilt:!inv2.beamUnlocked,    label:'ЛУЧ',    short:'ЛУЧ',    cost:120, matCost:2, id:'beam'},
-         {unbuilt:!inv2.burstUnlocked,   label:'БЁРСТ',  short:'БЁРСТ',  cost:150, matCost:3, id:'burst'},
-       ];
+         {unbuilt:inv2.laserBlueprint&&!inv2.laserStrong, label:'ЛАЗЕР L2', short:'Л2', cost:90, matCost:0, id:'l2', total:480},
+         {unbuilt:inv2.bubblikaContract&&!inv2.shieldBuilt, label:'ЩИТ', short:'ЩИТ', cost:60, matCost:0, id:'shield', total:360},
+         {unbuilt:!inv2.spreadUnlocked,  label:'СПРЕД',  short:'СПРЕД',  cost:50,  matCost:1, id:'spread',  total:300},
+         {unbuilt:!inv2.missileUnlocked, label:'РАКЕТА', short:'РАКЕТА', cost:80,  matCost:2, id:'missile', total:600},
+         {unbuilt:!inv2.beamUnlocked,    label:'ЛУЧ',    short:'ЛУЧ',    cost:120, matCost:2, id:'beam',    total:840},
+         {unbuilt:!inv2.burstUnlocked,   label:'БЁРСТ',  short:'БЁРСТ',  cost:150, matCost:3, id:'burst',   total:960},
+       ].filter(i=>!queued.has(i.id));
        const next=items.find(i=>i.unbuilt);
        if(!next){
-         G.notif='ВСЁ СОБРАНО! ЛЕТИ К ТИНЕ!';G.notifT=100;G.notifCol=P.GRN;sfxUI();return;
+         if(G.ship.craftQueue.length>0){
+           G.notif='ОЧЕРЕДЬ ЗАГРУЖЕНА — ЛЕТИ В КОСМОС!';G.notifT=100;G.notifCol=P.CYA;sfxUI();
+         } else {
+           G.notif='ВСЁ СОБРАНО! ЛЕТИ К ТИНЕ!';G.notifT=100;G.notifCol=P.GRN;sfxUI();
+         }
+         return;
        }
-       // Чертежи квестовых предметов требуют сами чертежи
        if(next.id==='l2'&&!inv2.laserBlueprint){G.notif='НУЖЕН ЧЕРТЁЖ Л2 (ДРОШ)';G.notifT=90;G.notifCol=P.YEL;sfxHit();return;}
        if(next.id==='shield'&&!inv2.bubblikaContract){G.notif='НУЖЕН ЧЕРТЁЖ ЩИТА (БУББЛИКА)';G.notifT=90;G.notifCol=P.YEL;sfxHit();return;}
        const haveCR=G.pl.cr, haveMat=G.campaignState.materials||0;
        if(haveCR<next.cost){G.notif=next.short+': НУЖНО '+next.cost+' КР (ЕСТЬ '+haveCR+')';G.notifT=90;G.notifCol=P.RED;sfxHit();return;}
        if(haveMat<next.matCost){G.notif=next.short+': НУЖНО '+next.matCost+' МАТЕР. (ЕСТЬ '+haveMat+')';G.notifT=90;G.notifCol=P.RED;sfxHit();return;}
-       // Списываем и применяем эффект
+       // Списываем стоимость и ставим в очередь
        G.pl.cr-=next.cost;
        G.campaignState.materials=haveMat-next.matCost;
-       const rewards=[{label:'-'+next.cost+' КРЕДИТОВ',col:P.YEL}];
-       if(next.matCost>0)rewards.push({label:'-'+next.matCost+' МАТЕРИАЛОВ',col:P.CYA});
-       let glowCol=P.GRN;
-       switch(next.id){
-         case 'l2':
-           inv2.laserStrong=true;
-           rewards.unshift({label:'ЛАЗЕР L2 АКТИВЕН',col:P.L3});
-           glowCol=P.L3;
-           break;
-         case 'shield':
-           inv2.shieldBuilt=true;
-           G.pl.mhp+=40;G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+40);
-           rewards.unshift({label:'+40 МАКС. ХП',col:P.HP});
-           rewards.unshift({label:'ЭНЕРГОЩИТ АКТИВЕН',col:P.CYA});
-           glowCol=P.CYA;
-           break;
-         case 'spread':
-           inv2.spreadUnlocked=true;
-           rewards.unshift({label:'СПРЕД — ВЕЕР ИЗ 3 ПУЛЬ',col:P.L1L});
-           glowCol=P.L1;
-           break;
-         case 'missile':
-           inv2.missileUnlocked=true;
-           rewards.unshift({label:'РАКЕТА — САМОНАВЕДЕНИЕ',col:P.ORA});
-           glowCol=P.ORA;
-           break;
-         case 'beam':
-           inv2.beamUnlocked=true;
-           rewards.unshift({label:'ЛУЧ — НЕПРЕРЫВНЫЙ',col:P.L2});
-           glowCol=P.L2;
-           break;
-         case 'burst':
-           inv2.burstUnlocked=true;
-           rewards.unshift({label:'БЁРСТ — ОЧЕРЕДЬ 5 ПУЛЬ',col:P.YEL});
-           glowCol=P.YEL;
-           break;
-       }
-       showQuestReward(G,'УЛУЧШЕНИЕ СОЗДАНО',rewards,glowCol);
-       sfxPU();setTimeout(sfxUI2,80);setTimeout(sfxPU,160);flash(.4,glowCol);
-       spPts(LW/2,LH/2,30,[glowCol,P.WHT,P.YEL],.7,4,30,.02,2);
-       addShockwave(LW/2,LH/2,40,glowCol,20);shake(3);
+       G.ship.craftQueue.push({id:next.id,short:next.short,progress:0,total:next.total});
+       G.notif=next.short+' В ОЧЕРЕДИ: '+next.total+' ЕД. ЛЕТИ В КОСМОС!';
+       G.notifT=130;G.notifCol=P.CYA;sfxUI2();sfxPU();
+       flash(.2,P.CYA);spPts(LW/2,LH/2,12,[P.CYA,P.WHT],.4,2,14);
      },
-     notif:'СБОРКА УЛУЧШЕНИЙ ПО ЧЕРТЕЖАМ.'},
+     notif:'ОЧЕРЕДЬ КРАФТА. ПРОГРЕСС ИДЁТ В ПОЛЁТЕ.'},
     {col:1,row:1,id:'bridge',name:'МОСТИК',col2:P.UIT,
-     hint:'ЦЕЛЬ: '+((PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh).name), status:'info',
+     hint:((PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh).name)+' | РАБ '+_w.bridge+' (-'+(_w.bridge*5)+'% урон)',
+     status:'info',workerRoom:'bridge',
      action:null, notif:'НАВИГАЦИЯ И КУРС КОРАБЛЯ.'},
   ];
 
@@ -489,6 +485,20 @@ function drwShipView(G){
       x:rx,y:ry,w:cellW,h:cellH,
       action:rm.action, col:rm.col2, notif:rm.notif
     });
+    // ★ Phase 2.4: +/- кнопки распределения рабочих в правом-верхнем углу
+    if(rm.workerRoom){
+      const bw=8,bh=8;
+      const mx=rx+cellW-bw-2, mxx=mx-bw-2; // [-] левее
+      const my=ry+2;
+      // Кнопка [-]
+      rc(mxx,my,bw,bh,'#1a1a1a');rc(mxx+1,my+1,bw-2,bh-2,'#332222');
+      txt('-',mxx+3,my+2,_w[rm.workerRoom]>0?P.RED:'#664444',1);
+      // Кнопка [+]
+      rc(mx,my,bw,bh,'#1a1a1a');rc(mx+1,my+1,bw-2,bh-2,'#223322');
+      txt('+',mx+3,my+2,P.GRN,1);
+      G._shipRoomHits.push({x:mxx,y:my,w:bw,h:bh,workerAction:'minus',workerRoom:rm.workerRoom,col:P.UIT,notif:''});
+      G._shipRoomHits.push({x:mx,y:my,w:bw,h:bh,workerAction:'plus',workerRoom:rm.workerRoom,col:P.UIT,notif:''});
+    }
   }
 
   // ===== ПРАВАЯ ПАНЕЛЬ ДАННЫХ =====
@@ -525,7 +535,20 @@ function drwShipView(G){
   txs('РЕСУРСЫ',panelX+3,py,P.UIT2,P.BLK,1);py+=8;
   txs('КР '+G.pl.cr,panelX+3,py,P.YEL,P.BLK,1);
   txs('РЕ '+G.pl.res,panelX+3+(panelW>>1),py,P.RES,P.BLK,1);py+=8;
-  txs('РАБОЧ '+G.pl.workers,panelX+3,py,P.EN,P.BLK,1);py+=8;
+  // ★ Phase 2.4: компактное распределение рабочих
+  ensureShipWorkers(G);
+  const _ww=G.ship.workers;
+  txs('РАБ '+G.pl.workers+': P'+_ww.power+' F'+_ww.fuel+' B'+_ww.bridge+' W'+_ww.workshop,panelX+3,py,P.EN,P.BLK,1);py+=8;
+  // Строка очереди крафта
+  if(G.ship.craftQueue&&G.ship.craftQueue.length>0){
+    const cq=G.ship.craftQueue[0];
+    const pct=(cq.progress/cq.total*100)|0;
+    txs(cq.short+' '+pct+'%',panelX+3,py,P.CYA,P.BLK,1);py+=6;
+    bar(panelX+3,py,panelW-7,2,cq.progress/cq.total,P.CYA,'#001122');py+=4;
+    if(G.ship.craftQueue.length>1){
+      txs('+'+(G.ship.craftQueue.length-1)+' В ОЧЕРЕДИ',panelX+3,py,P.DIM,P.BLK,1);py+=7;
+    }
+  }
   // Разделитель
   rc(panelX+3,py,panelW-7,1,'#1a3550');py+=3;
 
@@ -1075,6 +1098,47 @@ function spawnTinaWeakSpots(T,count){
 
 // ★ Phase 2.3: восстановление боя с Тиной с указанной фазы (для чекпоинтов finale_phase_N).
 //   Используется в gameover-перезапуске вместо initFinaleTina+startTinaBattle с нуля.
+// ★ Phase 2.4: завершение крафта — устанавливает inventory-флаг и показывает награду.
+//   Вызывается из updSpace когда item.progress >= item.total.
+function _completeCraft(G,item){
+  const inv=G.campaignState.inventory;
+  const rewards=[];
+  let glowCol=P.GRN;
+  switch(item.id){
+    case 'l2':
+      inv.laserStrong=true;
+      rewards.push({label:'ЛАЗЕР L2 АКТИВЕН',col:P.L3});
+      glowCol=P.L3; break;
+    case 'shield':
+      inv.shieldBuilt=true;
+      G.pl.mhp+=40;G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+40);
+      rewards.push({label:'ЭНЕРГОЩИТ АКТИВЕН',col:P.CYA});
+      rewards.push({label:'+40 МАКС. ХП',col:P.HP});
+      glowCol=P.CYA; break;
+    case 'spread':
+      inv.spreadUnlocked=true;
+      rewards.push({label:'СПРЕД — ВЕЕР ИЗ 3 ПУЛЬ',col:P.L1L});
+      glowCol=P.L1; break;
+    case 'missile':
+      inv.missileUnlocked=true;
+      rewards.push({label:'РАКЕТА — САМОНАВЕДЕНИЕ',col:P.ORA});
+      glowCol=P.ORA; break;
+    case 'beam':
+      inv.beamUnlocked=true;
+      rewards.push({label:'ЛУЧ — НЕПРЕРЫВНЫЙ',col:P.L2});
+      glowCol=P.L2; break;
+    case 'burst':
+      inv.burstUnlocked=true;
+      rewards.push({label:'БЁРСТ — ОЧЕРЕДЬ 5 ПУЛЬ',col:P.YEL});
+      glowCol=P.YEL; break;
+  }
+  showQuestReward(G,'КРАФТ ЗАВЕРШЁН',rewards,glowCol);
+  sfxPU();setTimeout(sfxUI2,80);setTimeout(sfxPU,160);
+  flash(.4,glowCol);
+  spPts(G.pl.x,G.pl.y,18,[glowCol,P.WHT,P.YEL],.6,3,22,.02,1.8);
+  addShockwave(G.pl.x,G.pl.y,24,glowCol,16);shake(2);
+}
+
 function restoreFinalePhase(G,targetPhase,targetHp){
   initFinaleTina(G);
   const F=G.finale;

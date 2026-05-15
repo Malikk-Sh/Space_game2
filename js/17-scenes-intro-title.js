@@ -1214,7 +1214,10 @@ function _executeDevAction(G,idx){
 }
 function devTeleport(G,dest){
   // Восстанавливаем корабль
-  if(!G.ship)G.ship={fuel:100,decor:0}; else G.ship.fuel=100;
+  if(!G.ship)G.ship={fuel:100,decor:0,workers:{power:G.pl.workers||4,fuel:0,bridge:0,workshop:0},craftQueue:[]};
+  else G.ship.fuel=100;
+  // ★ Phase 2.4: гарантируем структуру воркеров для dev-teleport
+  if(typeof ensureShipWorkers==='function')ensureShipWorkers(G);
   // Восстанавливаем игрока
   G.pl.hp=G.pl.mhp;G.pl.en=G.pl.men;G.pl.inv=0;G.pl.shield=0;G.pl.boost=0;
   // Пушим планеты в visited
