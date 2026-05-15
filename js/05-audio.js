@@ -207,6 +207,14 @@ function sfxVictory() {
   setTimeout(() => bip(1047, .4, .2,  'square'), 600);
 }
 
+// ★ Phase 4.4: Низкое урчание перед посадкой — вход в атмосферу.
+//   Шум через лоупасс + лёгкий низкий sawtooth-нарастающий тон.
+function sfxAtmosphereEnter() {
+  if (!AC || !SFX_ON) return;
+  noise(.8, .12, 350);
+  bip(60, .9, .15, 'sawtooth', 60, 110);
+}
+
 // ★ Phase 3.2: Эмоциональная sine-трель для финальной сцены с РАЙГАРОМ.
 //   Медленная, мажорная, не торжествующая — благодарная.
 function sfxEmotional() {

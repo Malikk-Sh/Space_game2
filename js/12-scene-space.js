@@ -279,7 +279,15 @@ function updSpace(G){
       PTS.push({x:txp+(Math.random()-.5)*2,y:p.y+(Math.random()-.5)*3,vx:-.8-Math.random()*.8,vy:(Math.random()-.5)*.3,lf:12,ml:16,col:(Math.random()<.5?P.TH1:P.TH2),sz:1,gv:0,fade:.7});
     }
     scrollStars(3+t*.045);
+    // ★ Phase 4.4: эффект приближения — низкий рык на старте, шиммер при пересечении границы атмосферы.
+    if(t===5)sfxAtmosphereEnter();
     if(t===55)sfxLand();
+    if(t===120){
+      const pInfo=PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh;
+      flash(.35,pInfo.approachCol||P.CYA);
+      shake(2);
+    }
+    if(t===122)shake(2);  // двойной shake для «гулкого» удара по атмосфере
     // Удлинённая посадка (было 170 → стало 280) даёт время прочитать брифинг.
     if(t>280){
       if(!G.landingTriggered){
@@ -909,6 +917,21 @@ function drwSpace(G){rc(0,0,LW,LH,P.BG);applyShake();drwNebula();drwStars();
     drwShip(G.pl.x,G.pl.y,G.pl.inv,G.pl.thrT,G.pl.boost>0,G.pl.hp/G.pl.mhp);
   }
   if(G.pl.shield>0)drwShield(G.pl.x,G.pl.y,G.sT);
+  // ★ Phase 4.4: tint корабля цветом планеты на подлёте — корпус «греется» отражённым светом.
+  //   Нарастает по мере приближения, пик на t=140, затухает с фейдом корабля.
+  if(G.appr){
+    const pInfo=PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh;
+    const tintCol=pInfo.approachCol||P.CYA;
+    // alpha поднимается с 0 до ~0.3, потом плавно затухает вместе с shipA
+    const ramp=Math.min(1,G.landT/140);
+    const tintA=0.30*ramp*shipA;
+    if(tintA>0.01){
+      cx.globalAlpha=tintA;
+      cx.fillStyle=tintCol;
+      // Перекрашиваем прямоугольную зону вокруг корабля (~26x18 — захватывает корпус и крылья)
+      cx.fillRect((G.pl.x-13)|0,(G.pl.y-9)|0,26,18);
+    }
+  }
   cx.globalAlpha=1;
   drwFTX();drawFlash();clearShake();drwHUD(G);
   drwAlienBriefing(G);
