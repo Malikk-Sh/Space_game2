@@ -127,3 +127,78 @@ function drwFTX() {
     cx.globalAlpha = 1;
   }
 }
+
+
+// ============================================================
+// ★ Phase 5.3: СИСТЕМА ДОСТИЖЕНИЙ (15 штук)
+//   Хранение: G.achievements = {id:{unlocked:true, timestamp:N}, ...}
+//   Срабатывание: unlockAchievement(G, id) — игнорирует уже разблокированные.
+//   Визуал: жёлтая полоса сверху на ~3 секунды, slide-in/out fade.
+//   Звук: sfxAchievement.
+// ============================================================
+const ACHIEVEMENTS_DEFS = [
+  {id:'firstAst',     name:'ПЕРВЫЕ ОБЛОМКИ',     hint:'Уничтожить первый астероид'},
+  {id:'droshSave',    name:'СПАСИТЕЛЬ ДРОША',    hint:'Завершить квест Дроша'},
+  {id:'bubblikaSave', name:'СПАСИТЕЛЬ БУББЛИКИ', hint:'Завершить квест Бубблики'},
+  {id:'krasSave',     name:'СПАСИТЕЛЬ КРАСНОЗЁМА',hint:'Завершить квест Краснозёма'},
+  {id:'tinaDefeated', name:'ОСКОЛКИ СОБРАНЫ',    hint:'Победить Тину'},
+  {id:'noDeath',      name:'БЕЗ ЦАРАПИНЫ',       hint:'Идеальный финал'},
+  {id:'speedrun',     name:'СПИДРАН',            hint:'Время — космос'},
+  {id:'combo20',      name:'ГЕРОЙ КОМБО',        hint:'Не отпускай курок'},
+  {id:'resKing',      name:'РЕСУРСНЫЙ КОРОЛЬ',   hint:'Собрать 50 RES'},
+  {id:'banker',       name:'БАНКИР',             hint:'Накопить 500 КР'},
+  {id:'economist',    name:'ЭКОНОМ',             hint:'Береги бак'},
+  {id:'beaconMaster', name:'МАСТЕР МАЯКОВ',      hint:'5/5 маяков без потерь'},
+  {id:'pacifist',     name:'ПАЦИФИСТ',           hint:'Путь миротворца'},
+  {id:'arsenal',      name:'АРСЕНАЛ',            hint:'Коллекционер'},
+  {id:'catChat',      name:'КОШКА В КУРСЕ',      hint:'Знаком со всеми'},
+];
+
+function unlockAchievement(G, id) {
+  if (!G.achievements) G.achievements = {};
+  if (G.achievements[id] && G.achievements[id].unlocked) return;
+  G.achievements[id] = {unlocked:true, timestamp:G.sT || 0};
+  G.achievementBanner = {t:0, id, duration:180};
+  sfxAchievement();
+}
+
+function updAchievementBanner(G) {
+  if (!G.achievementBanner) return;
+  G.achievementBanner.t++;
+  if (G.achievementBanner.t > G.achievementBanner.duration) G.achievementBanner = null;
+}
+
+function drwAchievementBanner(G) {
+  if (!G.achievementBanner) return;
+  const b = G.achievementBanner;
+  const def = ACHIEVEMENTS_DEFS.find(d => d.id === b.id);
+  if (!def) return;
+  const totalT = b.duration, fadeT = 22;
+  let a = 1;
+  if (b.t < fadeT) a = b.t / fadeT;
+  else if (b.t > totalT - fadeT) a = Math.max(0, (totalT - b.t) / fadeT);
+  // Slide-in эффект: 6px вверх в начале
+  const slideY = (b.t < fadeT) ? -6 * (1 - b.t / fadeT) : 0;
+  cx.globalAlpha = a;
+  const bh = 14;
+  rc(0, slideY|0, LW, bh, '#332200');
+  rc(0, slideY|0, LW, 1, P.YEL);
+  rc(0, (slideY + bh - 1)|0, LW, 1, P.YEL);
+  // Звезда-иконка
+  cx.fillStyle = P.YEL;
+  cx.fillRect(5, slideY + 6, 1, 1);
+  cx.fillRect(4, slideY + 5, 3, 3);
+  cx.fillRect(3, slideY + 6, 5, 1);
+  // Текст: метка + название
+  txs('ДОСТИЖЕНИЕ:', 11, slideY + 4, P.YEL, P.BLK, 1);
+  txs(def.name, 11 + gw('ДОСТИЖЕНИЕ:') + 3, slideY + 4, P.WHT, P.BLK, 1);
+  cx.globalAlpha = 1;
+}
+
+// Возвращает количество разблокированных достижений (для UI в паузе/меню).
+function countAchievements(G) {
+  if (!G.achievements) return 0;
+  let n = 0;
+  for (const id in G.achievements) if (G.achievements[id] && G.achievements[id].unlocked) n++;
+  return n;
+}

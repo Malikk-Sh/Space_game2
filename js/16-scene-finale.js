@@ -819,6 +819,15 @@ function updTinaBattle(G){
 function tinaDie(G){
   const F=G.finale,T=F.tina;
   T.defeated=true;TAP_FIRE=false;
+  // ★ Phase 5.3: достижения за победу над Тиной
+  unlockAchievement(G,'tinaDefeated');
+  if((G._aFinaleDeaths||0)===0)unlockAchievement(G,'noDeath');
+  if(G._aStartT){
+    const elapsedMin=(Date.now()-G._aStartT)/60000;
+    if(elapsedMin<30)unlockAchievement(G,'speedrun');
+  }
+  if(G.ship&&G.ship.fuel>50)unlockAchievement(G,'economist');
+  if((G._aTotalPirateKills||0)<10)unlockAchievement(G,'pacifist');
   // ★ v16 r10 #3: Если игрок убил Тину штатно (без катсцены кота) — показываем взрыв.
   // Если катсцена кота уже отыграла сцену звезды (eT>=1740) — пропускаем взрыв и идём прямо к коту
   const fromCatScene=T.emergencyProtocol&&T.emergencyProtocol.t>=1740;
@@ -1467,6 +1476,8 @@ function updFinaleTina(G){
   // Смерть игрока
   if(_DEV.immortal&&p.hp<=0){p.hp=p.mhp;p.en=p.men;p.shield=0;} // DEV: бессмертие
   if(p.hp<=0){
+    // ★ Phase 5.3: учёт смертей в финале (для достижения "Без царапины")
+    G._aFinaleDeaths=(G._aFinaleDeaths||0)+1;
     spPts(p.x,p.y,34,[P.SH1,P.TH1,P.WHT,P.L1],1,5.5,50,.06,2);
     addShockwave(p.x,p.y,40,P.WHT,25);sfxX(3);flash(.9,P.WHT);shake(10);
     G.state='gameover';G.goT=0;resetBtns();return;

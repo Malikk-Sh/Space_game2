@@ -180,6 +180,8 @@ let _lastFrameTs=0,_frameAccum=0;
 
 function _runUpdate(){
   updateMusicForGame(G);
+  // ★ Phase 5.3: тик баннера достижений (живёт между сценами)
+  updAchievementBanner(G);
   // ★ v22 — QRW: пока попап активен — сцена обновляется, но ввод блокируем
   if(G.qrw&&G.qrw.active){
     G.qrw.t++;
@@ -221,6 +223,8 @@ function _runRender(){
   }
   // ★ v22 — QRW поверх любой сцены
   if(G.qrw&&G.qrw.active)drwQuestReward(G);
+  // ★ Phase 5.3: баннер достижений поверх любой сцены
+  if(G.achievementBanner)drwAchievementBanner(G);
 }
 
 function loop(ts){

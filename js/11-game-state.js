@@ -12,7 +12,18 @@ function newGame(){return{state:'menu',menuT:0,menuSt:[],pl:{x:50,y:LH/2,vx:0,vy
   campaignState:{currentPlanet:'drosh',targetPlanet:'drosh',planetsVisited:[],planetsCompleted:[],inventory:{krokRecords:false,bubblikaContract:false,laserBlueprint:false,laserStrong:false,shieldBlueprint:false,shieldBuilt:false,starBattery:false,spreadUnlocked:false,missileUnlocked:false,beamUnlocked:false,burstUnlocked:false},materials:0,inventory_extra:{},flags:{pfftGifted:false,droshSideDone:false,bubSideDone:false,
     // Флаги показа туториалов (один раз)
     tutSpaceShown:false,tutDroshShown:false,tutShipShown:false,
-  }},ship:{fuel:70,decor:0,workers:{power:2,fuel:0,bridge:0,workshop:0},craftQueue:[]}};}
+  }},ship:{fuel:70,decor:0,workers:{power:2,fuel:0,bridge:0,workshop:0},craftQueue:[]},
+  // ★ Phase 5.3: ачивки + аккумулирующие счётчики
+  achievements:{},
+  achievementBanner:null,
+  _aStartT:Date.now(),
+  _aTotalPirateKills:0,
+  _aTotalResCollected:0,
+  _aBeaconsLost:0,
+  _aFinaleDeaths:0,
+  _aNpcsTalked:{},
+  _aFirstAstKilled:false,
+  };}
 
 // ★ Phase 2.4: гарантирует наличие новых полей в G.ship для старых сейвов.
 //   Старая модель имела только G.pl.workers (всего рабочих). Новая хранит
@@ -139,6 +150,11 @@ function drwPauseOverlay(G){
   }
   // Подсказка
   txcs(USE_TOUCH_UI?'ТАП - ВЫБРАТЬ':'СТРЕЛКИ / ENTER / ESC',py+ph-10,P.UIT2,P.BLK,1);
+  // ★ Phase 5.3: счётчик ачивок в нижнем левом углу
+  if(typeof countAchievements==='function'){
+    const n=countAchievements(G);
+    txs('★ '+n+'/15',px+4,py+ph-19,P.YEL,P.BLK,1);
+  }
 }
 
 // ★ Завершает выход в главное меню (вызывается после подтверждения)

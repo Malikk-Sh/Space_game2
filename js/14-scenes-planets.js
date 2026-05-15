@@ -165,6 +165,8 @@ function updPlanetDrosh(G){
     if(lit.length>0&&Math.random()<0.30){
       const target=lit[Math.floor(Math.random()*lit.length)];
       target.fixed=false;
+      // ★ Phase 5.3: учёт потерь для достижения "Мастер маяков"
+      G._aBeaconsLost=(G._aBeaconsLost||0)+1;
       G.notif='МЕТЕЛЬ ПОГАСИЛА МАЯК!';G.notifT=110;G.notifCol=P.RED;
       sfxHit();
       spPts(target.x,target.y-10,12,['#888899','#ddeeff','#aaaacc'],.4,2,20,.02);
@@ -220,8 +222,11 @@ function updPlanetDrosh(G){
     }
     if(G.droshSide.holdT>=G.droshSide.holdDur){
       // Победа
-      G.droshSide.done=true;G.campaignState.flags.droshSideDone=true;G.pl.cr+=120;G.ship.fuel=Math.min(100,G.ship.fuel+30);
+      G.droshSide.done=true;G.droshDone=true;G.campaignState.flags.droshSideDone=true;G.pl.cr+=120;G.ship.fuel=Math.min(100,G.ship.fuel+30);
       G.pl.mhp+=40;G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+40);
+      // ★ Phase 5.3: спаситель Дроша + мастер маяков (если ни один не погас от метели)
+      unlockAchievement(G,'droshSave');
+      if((G._aBeaconsLost||0)===0)unlockAchievement(G,'beaconMaster');
       showQuestReward(G,'ЗАДАНИЕ ВЫПОЛНЕНО',[
         {label:'+120 КРЕДИТОВ',col:P.YEL},
         {label:'+30 ТОПЛИВА',col:P.ORA},
@@ -654,6 +659,12 @@ function startDlgGraph(G,npc){
   if(npc.id==='klirr')G._met_klirr=true;
   if(npc.id==='zorp')G._met_zorp=true;
   if(npc.id==='krok')G._met_krok=true;
+  // ★ Phase 5.3: учёт встреченных NPC — для достижения "Кошка в курсе"
+  if(!G._aNpcsTalked)G._aNpcsTalked={};
+  if(npc.id&&!G._aNpcsTalked[npc.id]){
+    G._aNpcsTalked[npc.id]=true;
+    if(Object.keys(G._aNpcsTalked).length>=7)unlockAchievement(G,'catChat');
+  }
   G.dlg={mode:'graph',graph:g,node:start,choiceIdx:0,speaker:g.speaker||npc.name,prevAllowJoy:ALLOW_JOY};
   G.dlgChar=0;setJoyEnabled(false);
 }
@@ -1164,6 +1175,8 @@ function updPlanetBubblika(G){
   const blabDone=!!G.campaignState.inventory.bubblikaContract;
   if(!G.bubblikaDone&&pfftDone&&blabDone){
     G.bubblikaDone=true;G.pl.cr+=100;
+    // ★ Phase 5.3: спаситель Бубблики
+    unlockAchievement(G,'bubblikaSave');
     showQuestReward(G,'ПЛАНЕТА ПРОЙДЕНА',[
       {label:'+100 КРЕДИТОВ',col:P.YEL},
       {label:'МАРШРУТ ОТКРЫТ',col:P.GRN},
@@ -1905,6 +1918,8 @@ function updPlanetKrasnozem(G){
   const alive=KZ.scavengers.filter(s=>s.alive).length;
   if(!G.krasDone&&KZ.delivered>=KZ.shells.length&&alive===0&&KZ.shellShots.length===0){
     G.krasDone=true;KZ.coreReady=true;G.campaignState.inventory.starBattery=true;G.pl.cr+=200;
+    // ★ Phase 5.3: спаситель Краснозёма
+    unlockAchievement(G,'krasSave');
     G.pl.men+=40;G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+80);
     G.notif='ЗВЁЗДНАЯ БАТАРЕЯ ПОЛУЧЕНА! ЭНЕРГИЯ В БОЮ БЕЗ ЛИМИТА.';G.notifT=260;G.notifCol=P.YEL;
     spPts(LW/2,LH/2,42,[P.YEL,P.WHT,P.KRZ3,P.CYA],1,4,45,.02,2);addShockwave(LW/2,LH/2,42,P.YEL,35);flash(.45,P.YEL);sfxPU();setTimeout(sfxPU,90);setTimeout(sfxPU,180);
