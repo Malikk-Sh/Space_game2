@@ -647,6 +647,9 @@ function startDlgGraph(G,npc){
   if(npc.id==='klirr'&&G._met_klirr&&g.nodes.repeat)start='repeat';
   if(npc.id==='zorp'&&G._met_zorp&&g.nodes.repeat)start='repeat';
   if(npc.id==='krok'&&G._met_krok&&g.nodes.repeat&&G.campaignState.inventory.krokRecords)start='repeat';
+  // ★ Phase 3.3: после завершения квеста Дроша — особый "post_quest" узел Клирра
+  //   (приоритет над 'repeat')
+  if(npc.id==='klirr'&&G.droshDone&&g.nodes.post_quest)start='post_quest';
   // Помечаем что встретились
   if(npc.id==='klirr')G._met_klirr=true;
   if(npc.id==='zorp')G._met_zorp=true;
