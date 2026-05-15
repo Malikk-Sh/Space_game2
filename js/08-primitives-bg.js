@@ -6,7 +6,36 @@
 // ============================================================
 
 const STARS=[],NEBULA=[];
-function initStars(){STARS.length=0;const sp=[.05,.18,.45,.9],cl=[P.S4,P.S3,P.S2,P.S1];for(let i=0;i<200;i++){const l=i<70?0:i<130?1:i<180?2:3;STARS.push({x:Math.random()*LW,y:Math.random()*LH,l,col:cl[l],sp:sp[l],tw:Math.random()*Math.PI*2,twSp:.02+Math.random()*.06});}NEBULA.length=0;for(let i=0;i<14;i++){NEBULA.push({x:Math.random()*LW,y:Math.random()*LH,r:12+Math.random()*22,col:['#1a0a3a','#0a1a3a','#3a0a2a','#0a2a3a'][(Math.random()*4)|0],sp:.04+Math.random()*.08,a:.08+Math.random()*.14});}}
+// ★ Phase 4.3: палитры туманностей по биомам/целевым планетам.
+//   drosh — холодная зона, синие/льдистые; bubblika — газовая, фиолетово-розовая;
+//   krasnozem — раскалённая, красно-оранжевая; center — мёртвая, тёмно-пурпурная;
+//   default — старая смешанная палитра (для меню/титульника/интро).
+const NEBULA_PALETTES={
+  drosh:    ['#1a2a4a','#2a3a5a','#3a4a6a','#5a7aaa'],
+  bubblika: ['#3a0a2a','#5a1a3a','#4a1a4a','#7a3388'],
+  krasnozem:['#3a1a0a','#5a2a0a','#aa3322','#882211'],
+  center:   ['#0a0a1a','#1a0a2a','#2a0a1a','#3a0a0a'],
+  default:  ['#1a0a3a','#0a1a3a','#3a0a2a','#0a2a3a'],
+};
+function initStars(biome){
+  STARS.length=0;
+  const sp=[.05,.18,.45,.9],cl=[P.S4,P.S3,P.S2,P.S1];
+  for(let i=0;i<200;i++){
+    const l=i<70?0:i<130?1:i<180?2:3;
+    STARS.push({x:Math.random()*LW,y:Math.random()*LH,l,col:cl[l],sp:sp[l],tw:Math.random()*Math.PI*2,twSp:.02+Math.random()*.06});
+  }
+  NEBULA.length=0;
+  const palette=NEBULA_PALETTES[biome]||NEBULA_PALETTES.default;
+  for(let i=0;i<14;i++){
+    NEBULA.push({
+      x:Math.random()*LW,y:Math.random()*LH,
+      r:12+Math.random()*22,
+      col:palette[(Math.random()*palette.length)|0],
+      sp:.04+Math.random()*.08,
+      a:.08+Math.random()*.14,
+    });
+  }
+}
 // Параллакс: слой 0 (дальний) — 0.08×, слой 1 — 0.28×, слой 2 — 0.62×, слой 3 (ближний) — 1.0×
 const _STAR_PAR=[0.08,0.28,0.62,1.0];
 function scrollStars(m=1){for(const s of STARS){s.x-=s.sp*m*_STAR_PAR[s.l];if(s.x<0){s.x=LW;s.y=Math.random()*LH;}s.tw+=s.twSp;}for(const n of NEBULA){n.x-=n.sp*m;if(n.x<-40){n.x=LW+40;n.y=Math.random()*LH;}}}

@@ -895,7 +895,8 @@ function initFinaleTina(G){
   resetBtns();
   if(USE_TOUCH_UI){addBtn('w1',LW-52,LH-22,11,'1',P.L1);addBtn('w2',LW-28,LH-22,11,'2',P.L3);}
   setJoyEnabled(false);
-  PTS.length=0;SHK.length=0;FTX.length=0;initStars();G.transIn=60;
+  // ★ Phase 4.3: мёртвая зона у Тины — тёмно-пурпурные/чёрные туманности
+  PTS.length=0;SHK.length=0;FTX.length=0;initStars('center');G.transIn=60;
 }
 
 // ★ v16 r2: Клампим камеру так, чтобы view не выходил за worldBounds

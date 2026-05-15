@@ -111,7 +111,10 @@ function initSpace(G){saveCheckpoint(G,'space');TAP_FIRE=true;ALLOW_JOY=true;Obj
 if(G.pl.wepIdx==null)G.pl.wepIdx=(G.pl.wep===2?3:0);
 // Сброс на L1, если выбран недоступный слот (после загрузки старого сейва)
 if(!_wepUnlocked(G,G.pl.wepIdx)){G.pl.wepIdx=0;G.pl.wep=1;}
-if(G.pl.wep===2&&!G.campaignState.inventory.laserStrong)G.pl.wep=1;G.apprSX=G.pl.x;G.apprSY=G.pl.y;PTS.length=0;SHK.length=0;FTX.length=0;initStars();resetBtns();if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}
+if(G.pl.wep===2&&!G.campaignState.inventory.laserStrong)G.pl.wep=1;G.apprSX=G.pl.x;G.apprSY=G.pl.y;PTS.length=0;SHK.length=0;FTX.length=0;
+// ★ Phase 4.3: туманности окрашиваются в биом целевой планеты (холодные/газовые/раскалённые/мёртвые)
+initStars(G.campaignState.targetPlanet);
+resetBtns();if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}
 // ★ Phase 2.4: вход в корабль во время полёта — updSpace не вызывается пока state='ship_view', все процессы (топливо/прогресс/враги) застывают
   // === ТУТОРИАЛ КОСМОСА (только при первом полёте) ===
   if(!G.campaignState.flags.tutSpaceShown){
