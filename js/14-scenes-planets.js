@@ -1697,6 +1697,29 @@ function initPlanetKrasnozem(G){
       {x:252,y:58,vx:0,vy:0,t:90,cooldown:0,wanderA:Math.PI*1.2,alive:true},
       {x:185,y:150,vx:0,vy:0,t:120,cooldown:0,wanderA:Math.PI*0.2,alive:true},
     ],
+    // ★ Phase 4.2: данные для атмосферы — дальние горы (2 слоя зубчатых силуэтов),
+    //   диагональные пылевые потоки, пыльные вихри (spawn'ятся периодически).
+    // Горы: 30 точек на слой, X равномерно, Y — псевдослучайная высота (стабильна между кадрами).
+    mountains:{
+      far:Array.from({length:32},(_,i)=>({
+        x:i*(LW/30),
+        h:8+Math.abs(Math.sin(i*1.7+3.1))*6+Math.abs(Math.cos(i*0.9+1.2))*4
+      })),
+      near:Array.from({length:36},(_,i)=>({
+        x:i*(LW/34),
+        h:14+Math.abs(Math.sin(i*1.3+2.5))*10+Math.abs(Math.cos(i*0.7))*5
+      })),
+    },
+    // Диагональные пылевые штрихи — улучшение существующих streaks
+    sandStreaks:Array.from({length:32},()=>({
+      x:Math.random()*LW,y:30+Math.random()*70,
+      vx:0.3+Math.random()*0.3,
+      len:4+Math.random()*4,a:0.2+Math.random()*0.2,
+    })),
+    // Пыльные вихри (активные)
+    devils:[],
+    nextDevil:600+((Math.random()*300)|0),
+    devilT:0,
   };
   PTS.length=0;FTX.length=0;SHK.length=0;resetBtns();
   if(USE_TOUCH_UI){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);}
@@ -1760,6 +1783,31 @@ function updPlanetKrasnozem(G){
   if(G.notifT>0)G.notifT--;
   if(G.dlg){updDialog(G);G.sT++;flushIn();return;}
   G.sT++;const pc=G.pc,KZ=G.krz;let ix=0,iy=0;
+  // ★ Phase 4.2: пыльные вихри — спавн каждые ~600-900 кадров; каждый идёт слева направо.
+  if(KZ.devils){
+    KZ.devilT++;
+    if(KZ.devilT>=KZ.nextDevil){
+      KZ.devilT=0;
+      KZ.nextDevil=600+((Math.random()*300)|0);
+      KZ.devils.push({
+        x:-12,y:60+Math.random()*70,
+        vx:0.8+Math.random()*0.6,
+        t:0,life:0,maxLife:240+((Math.random()*60)|0),
+      });
+    }
+    for(let i=KZ.devils.length-1;i>=0;i--){
+      const d=KZ.devils[i];
+      d.t++;d.life++;d.x+=d.vx;
+      if(d.x>LW+20||d.life>d.maxLife)KZ.devils.splice(i,1);
+    }
+  }
+  // Обновление диагональных пылевых штрихов — респавн слева когда уходят за правый край
+  if(KZ.sandStreaks){
+    for(const s of KZ.sandStreaks){
+      s.x+=s.vx;
+      if(s.x>LW+s.len){s.x=-s.len;s.y=30+Math.random()*70;}
+    }
+  }
   if(K.KeyA||K.ArrowLeft)ix-=1;if(K.KeyD||K.ArrowRight)ix+=1;if(K.KeyW||K.ArrowUp)iy-=1;if(K.KeyS||K.ArrowDown)iy+=1;
   if(USE_TOUCH_UI&&TOUCH.joyActive){ix=TOUCH.joyDX;iy=TOUCH.joyDY;}
   const carrying=KZ.carryIdx>=0;const spd=carrying?0.62:1.05;let mv=false;
@@ -1872,6 +1920,78 @@ function updPlanetKrasnozem(G){
   updPts();updFTX();updSHK();
 }
 
+// ★ Phase 4.2: атмосфера Краснозёма — небесный градиент, красное солнце, далёкие горы,
+//   диагональные пылевые потоки, пыльные вихри. Горизонт ≈ y=70.
+function drwKrasnozemAtmosphere(G,t){
+  const KZ=G.krz;
+  // Вертикальный градиент: тёмное красно-чёрное небо сверху → оранжевая земля снизу.
+  // Горизонт примерно на y=70 — там цвет смещается резче.
+  for(let y=0;y<LH;y++){
+    let col;
+    if(y<70){
+      // Небо: KRZ_ATM (тёмный) → плавно тёплый красный
+      const f=y/70;
+      col=_hexLerp(P.KRZ_ATM,'#70251a',f);
+    } else {
+      // Земля: KRZ_ATM-edge → KRZ1 (яркий оранж снизу)
+      const f=(y-70)/(LH-70);
+      col=_hexLerp('#70251a',P.KRZ1,f);
+    }
+    rc(0,y,LW,1,col);
+  }
+  // Красное солнце — тусклый диск в правом верхнем углу
+  const sx=LW-30,sy=22;
+  cx.globalAlpha=.35;disc(sx,sy,14,P.KRZ3);cx.globalAlpha=.55;disc(sx,sy,10,P.KRZ3);cx.globalAlpha=.85;disc(sx,sy,5,'#ffcc88');cx.globalAlpha=1;
+  // Далёкие горы: 2 слоя зубчатых силуэтов как polyline-силуэты.
+  if(KZ.mountains){
+    // Дальний слой — alpha 0.7, цвет KRZ2 (более бледный)
+    cx.globalAlpha=.7;cx.fillStyle=P.KRZ2;
+    for(const m of KZ.mountains.far){
+      // Высота горы — относительно горизонта y=70. Вершина в y=70-h.
+      cx.fillRect(m.x|0,(70-m.h)|0,Math.ceil(LW/30)+1,(m.h+2)|0);
+    }
+    cx.globalAlpha=1;
+    // Ближний слой — alpha 1.0, темнее
+    cx.fillStyle='#3a0e08';
+    for(const m of KZ.mountains.near){
+      cx.fillRect(m.x|0,(70-m.h)|0,Math.ceil(LW/34)+1,(m.h+2)|0);
+    }
+    // Лёгкая верхняя кромка света на ближних горах
+    cx.fillStyle='#882a18';
+    for(const m of KZ.mountains.near){
+      cx.fillRect(m.x|0,(70-m.h)|0,Math.ceil(LW/34)+1,1);
+    }
+  }
+  // Диагональные пылевые потоки
+  if(KZ.sandStreaks){
+    for(const s of KZ.sandStreaks){
+      cx.globalAlpha=s.a;
+      cx.fillStyle=P.KRZ3;
+      // линия наклоном вправо-вверх (dx>dy)
+      cx.fillRect(s.x|0,s.y|0,(s.len|0),1);
+      cx.fillRect((s.x+1)|0,(s.y-1)|0,(s.len-1)|0,1);
+    }
+    cx.globalAlpha=1;
+  }
+  // Пыльные вихри — sin-спираль вокруг центральной X-позиции
+  if(KZ.devils){
+    for(const d of KZ.devils){
+      const fade=Math.min(1,d.life/20)*Math.min(1,(d.maxLife-d.life)/30);
+      cx.globalAlpha=.55*fade;
+      // 12 частиц по спирали
+      for(let i=0;i<12;i++){
+        const a=i/12*Math.PI*2+d.t*0.18;
+        const r=4+i*0.8;
+        const px=d.x+Math.cos(a)*r;
+        const py=d.y+Math.sin(a)*r*0.55-i*0.6; // более вытянутая вертикально
+        cx.fillStyle=i%3===0?P.KRZ3:P.KRZ2;
+        cx.fillRect(px|0,py|0,1,1);
+      }
+      cx.globalAlpha=1;
+    }
+  }
+}
+
 function drwPlanetKrasnozem(G){
   const t=G.sT,KZ=G.krz;
   // Текущий ветер (порыв или базовый)
@@ -1879,14 +1999,14 @@ function drwPlanetKrasnozem(G){
   const curDY=KZ.gustDur>0?KZ.gustDY:KZ.baseDY;
   const windSpd=Math.hypot(curDX,curDY);
 
-  // Небо и пыль на фоне.
-  for(let y=0;y<LH;y++){const c=y<35?'#230b0a':y<70?'#441814':y<110?'#70251a':'#9a3a23';rc(0,y,LW,1,c);}
+  // ★ Phase 4.2: атмосфера (градиент + солнце + горы + пыль + вихри)
+  drwKrasnozemAtmosphere(G,t);
 
-  // Дальние слои пыли движутся в направлении ветра
+  // Дальние слои пыли движутся в направлении ветра (поверх атмосферы)
   for(let i=0;i<20;i++){
     const layerSpd=0.3+(i%4)*0.15;
     const x=((i*41+t*layerSpd*Math.abs(curDX*8)*Math.sign(curDX||1))%LW+LW)%LW,y=34+(i*23)%90;
-    cx.globalAlpha=.15;rc(x,y,12+(i%4)*6,1,P.KRZ2);
+    cx.globalAlpha=.12;rc(x,y,12+(i%4)*6,1,P.KRZ2);
   }
   cx.globalAlpha=1;
 
