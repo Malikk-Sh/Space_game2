@@ -5,7 +5,7 @@
 // (originally sintara_v25.html lines 2253-2938)
 // ============================================================
 
-function initSpace(G){saveCheckpoint(G,'space');TAP_FIRE=true;ALLOW_JOY=true;Object.assign(G,{state:'space',asts:[],buls:[],rits:[],enms:[],ebuls:[],pups:[],sT:0,prog:0,appr:false,landT:0,astST:40,enmST:240,combo:0,comboT:0,transIn:60,landingTriggered:false});Object.assign(G.pl,{x:50,y:LH/2,vx:0,vy:0,inv:0,boost:0,squash:0,drift:0,boostWas:false,wep:Math.min(2,G.pl.wep||1)});if(G.pl.wep===2&&!G.campaignState.inventory.laserStrong)G.pl.wep=1;G.apprSX=G.pl.x;G.apprSY=G.pl.y;PTS.length=0;SHK.length=0;FTX.length=0;initStars();resetBtns();if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('w1',LW-52,LH-22,11,'1',P.L1);addBtn('w2',LW-28,LH-22,11,'2',P.L3);}
+function initSpace(G){saveCheckpoint(G,'space');TAP_FIRE=true;ALLOW_JOY=true;Object.assign(G,{state:'space',asts:[],buls:[],rits:[],enms:[],ebuls:[],pups:[],sT:0,prog:0,appr:false,landT:0,astST:40,enmST:240,combo:0,comboT:0,transIn:60,landingTriggered:false,_minibossSpawned:false,_sniperAlive:false});Object.assign(G.pl,{x:50,y:LH/2,vx:0,vy:0,inv:0,boost:0,squash:0,drift:0,boostWas:false,wep:Math.min(2,G.pl.wep||1)});if(G.pl.wep===2&&!G.campaignState.inventory.laserStrong)G.pl.wep=1;G.apprSX=G.pl.x;G.apprSY=G.pl.y;PTS.length=0;SHK.length=0;FTX.length=0;initStars();resetBtns();if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('w1',LW-52,LH-22,11,'1',P.L1);addBtn('w2',LW-28,LH-22,11,'2',P.L3);}
   // === ТУТОРИАЛ КОСМОСА (только при первом полёте) ===
   if(!G.campaignState.flags.tutSpaceShown){
     G.campaignState.flags.tutSpaceShown=true;
@@ -30,7 +30,75 @@ function initSpace(G){saveCheckpoint(G,'space');TAP_FIRE=true;ALLOW_JOY=true;Obj
 }
 
 function spwnAst(G){const sizes=[4,6,9],s=sizes[(Math.random()*3)|0];const y=s+4+Math.random()*(LH-s*2-24);const sp=.6+Math.random()*1.4+(1-G.prog)*.4;const cracks=[];for(let i=0;i<3+((Math.random()*4)|0);i++)cracks.push([Math.floor(Math.random()*s*2-s),Math.floor(Math.random()*s*2-s)]);G.asts.push({x:LW+s+4,y,s,sp,hp:s,maxHp:s,cracks,drop:Math.random()<.5,rot:0,flash:0});}
-function spwnPirate(G){const y=30+Math.random()*(LH-60);G.enms.push({x:LW+12,y,vx:-1.1-Math.random()*.6,vy:0,t:0,hp:6,maxHp:6,shootCD:60+Math.random()*60,flash:0});}
+function spwnPirate(G){const y=30+Math.random()*(LH-60);G.enms.push({type:'pirate',x:LW+12,y,vx:-1.1-Math.random()*.6,vy:0,t:0,hp:6,maxHp:6,shootCD:60+Math.random()*60,flash:0});}
+
+// ★ Танк — медленный, тяжёлый, крупные снаряды. Появляется при prog > 0.4.
+function spwnTank(G){
+  const y=40+Math.random()*(LH-80);
+  G.enms.push({type:'tank',x:LW+14,y,vx:-0.4,vy:0,t:0,hp:60,maxHp:60,shootCD:60+Math.random()*30,flash:0});
+}
+
+// ★ Рой дронов-камикадзе — 3-5 штук, преследуют игрока, гибнут на таран.
+function spwnDroneSwarm(G){
+  const n=3+Math.floor(Math.random()*3);
+  const baseY=40+Math.random()*(LH-80);
+  for(let i=0;i<n;i++){
+    G.enms.push({
+      type:'drone',
+      x:LW+10+i*8,
+      y:baseY+(Math.random()-.5)*30,
+      vx:-1.2,vy:0,
+      t:i*5,
+      hp:4,maxHp:4,shootCD:-1,flash:0,
+    });
+  }
+}
+
+// ★ Снайпер — почти неподвижен. Заряжает выстрел 60 кадров (видимый луч), затем мгновенный высокоурон снаряд.
+function spwnSniper(G){
+  const y=40+Math.random()*(LH-80);
+  G.enms.push({type:'sniper',x:LW+10,y,vx:-0.1,vy:0,t:0,hp:25,maxHp:25,chargeT:0,targetY:y,flash:0});
+}
+
+// ★ Мини-босс — кульминация полёта. 2 фазы (стрельба → таран при HP<50%). Один за полёт.
+function spwnMiniboss(G){
+  const y=LH/2+(Math.random()-.5)*30;
+  G.enms.push({type:'miniboss',x:LW+18,y,vx:-0.5,vy:0,t:0,hp:150,maxHp:150,shootCD:90,phase:'shoot',_raged:false,flash:0});
+}
+
+// ★ Взвешенный диспетчер спавна — выбирает тип врага по G.prog.
+//   Мини-босс — один раз за полёт, при prog > 0.7.
+//   Снайпер — одновременно живой только один.
+function spwnEnemy(G){
+  const prog=G.prog||0;
+  // Мини-босс — один раз за полёт (контролируем через G._minibossSpawned)
+  if(prog>0.7&&!G._minibossSpawned){
+    G._minibossSpawned=true;
+    spwnMiniboss(G);
+    G.notif='ПИРАТСКИЙ КРЕЙСЕР НА ГОРИЗОНТЕ!';G.notifT=120;G.notifCol=P.RED;
+    sfxBoss();
+    return;
+  }
+  // Снайпер — только один живой (контролируем через G._sniperAlive)
+  if(prog>0.3&&!G._sniperAlive&&Math.random()<0.15){
+    G._sniperAlive=true;
+    spwnSniper(G);
+    return;
+  }
+  // Дрон-рой — prog > 0.2
+  if(prog>0.2&&Math.random()<0.25){
+    spwnDroneSwarm(G);
+    return;
+  }
+  // Танк — prog > 0.4
+  if(prog>0.4&&Math.random()<0.3){
+    spwnTank(G);
+    return;
+  }
+  // По умолчанию — пират
+  spwnPirate(G);
+}
+
 function spwnPowerUp(G,x,y){const types=['shield','health','energy'];const type=types[(Math.random()*3)|0];G.pups.push({x,y,vx:-.8,vy:(Math.random()-.5)*1.0,type,t:0,lf:300});}
 
 function updSpace(G){
@@ -160,10 +228,10 @@ function updSpace(G){
     G.astST=Math.max(8,20+Math.floor(Math.random()*22)-Math.floor(G.prog*12));
   }
 
-  // Спавн пиратов
+  // ★ Спавн врагов — взвешенный по G.prog (пират/танк/дрон-рой/снайпер/мини-босс)
   G.enmST--;
   if(G.enmST<=0&&G.sT>400){
-    spwnPirate(G);
+    spwnEnemy(G);
     G.enmST=180+Math.floor(Math.random()*160);
   }
 
@@ -218,21 +286,63 @@ function updSpace(G){
         hit=true;break;
       }
     }
-    // Попадание по пиратам
+    // ★ Попадание пуль игрока по врагам — per-type хитбокс, дроп и эффекты
     if(!hit){
       for(let j=G.enms.length-1;j>=0;j--){
         const e=G.enms[j];
-        if(Math.abs(b.x-e.x)<8&&Math.abs(b.y-e.y)<5){
+        const _t=e.type||'pirate';
+        // Хитбоксы под размер каждого типа
+        let hbW,hbH;
+        if(_t==='tank'){     hbW=12;hbH=8; }
+        else if(_t==='drone'){ hbW=5; hbH=4; }
+        else if(_t==='sniper'){ hbW=10;hbH=4; }
+        else if(_t==='miniboss'){ hbW=16;hbH=10; }
+        else { hbW=8;hbH=5; } // пират
+        if(Math.abs(b.x-e.x)<hbW&&Math.abs(b.y-e.y)<hbH){
           e.hp-=b.dmg;e.flash=1;
           spPts(b.x,b.y,4,[P.PIR3,P.YEL,P.WHT],.4,2,10);
           sfxHit();
           if(e.hp<=0){
-            spPts(e.x,e.y,14,[P.PIR3,P.ORA,P.YEL,P.WHT],.6,3,24,.03,1.6);
-            addShockwave(e.x,e.y,16,P.PIR3);
-            sfxX(.8);shake(3);flash(.3,P.ORA);
-            hitStopAdd(3);G.combo+=2;G.comboT=120;
-            p.cr+=20;fText(e.x,e.y-8,'+20CR',P.YEL);
-            if(Math.random()<.5)spwnPowerUp(G,e.x,e.y);
+            // Per-type награды и эффекты смерти
+            let crGain,resGain=0,powerupChance=0,partCols,partN,partSp,shakeAmp,shockR,sfxScale;
+            if(_t==='tank'){
+              crGain=30;resGain=2;
+              partCols=[P.PIR3,P.RED,P.YEL,P.WHT];partN=22;partSp=3.5;
+              shakeAmp=4;shockR=22;sfxScale=1.2;
+            } else if(_t==='drone'){
+              crGain=5;resGain=1;
+              partCols=[P.L1,P.L1L,P.WHT];partN=8;partSp=2;
+              shakeAmp=1;shockR=10;sfxScale=.4;
+            } else if(_t==='sniper'){
+              crGain=15;resGain=2;powerupChance=.3;
+              partCols=[P.PUR,P.RED,P.YEL,P.WHT];partN=14;partSp=2.5;
+              shakeAmp=3;shockR=16;sfxScale=.8;
+              G._sniperAlive=false;
+            } else if(_t==='miniboss'){
+              crGain=80;resGain=5;
+              partCols=[P.PIR3,P.YEL,P.WHT,P.RED,P.ORA];partN=40;partSp=5;
+              shakeAmp=10;shockR=36;sfxScale=1.8;
+              flash(.6,P.YEL);hitStopAdd(8);
+              // Материал апгрейда добавляется в campaignState
+              G.campaignState.materials=(G.campaignState.materials||0)+1;
+              fText(e.x,e.y-16,'+МАТЕРИАЛ',P.CYA);
+            } else {
+              // пират — оригинальные параметры (без изменений)
+              crGain=20;powerupChance=.5;
+              partCols=[P.PIR3,P.ORA,P.YEL,P.WHT];partN=14;partSp=3;
+              shakeAmp=3;shockR=16;sfxScale=.8;
+            }
+            spPts(e.x,e.y,partN,partCols,.6,partSp,24,.03,1.6);
+            addShockwave(e.x,e.y,shockR,P.PIR3);
+            sfxX(sfxScale);shake(shakeAmp);flash(.3,P.ORA);
+            hitStopAdd(_t==='miniboss'?6:3);
+            G.combo+=(_t==='miniboss'?5:2);G.comboT=120;
+            p.cr+=crGain;fText(e.x,e.y-8,'+'+crGain+'CR',P.YEL);
+            // Дроп ресурсов (несколько, разбросаны)
+            for(let r=0;r<resGain;r++){
+              G.rits.push({x:e.x,y:e.y+(Math.random()-.5)*4,vx:-.5-Math.random()*.5,vy:(Math.random()-.5)*1.2,lf:250,t:0});
+            }
+            if(powerupChance>0&&Math.random()<powerupChance)spwnPowerUp(G,e.x,e.y);
             G.enms.splice(j,1);
           }
           hit=true;break;
@@ -242,43 +352,138 @@ function updSpace(G){
     if(hit){G.buls.splice(i,1);continue;}
   }
 
-  // Обновление пиратов
+  // ★ Обновление врагов — per-type AI и столкновение с игроком
   for(let i=G.enms.length-1;i>=0;i--){
     const e=G.enms[i];
-    e.t++;e.vy=Math.sin(e.t*.05)*.7;
-    e.x+=e.vx;e.y+=e.vy;e.flash*=.8;
-    if(e.x<-15){G.enms.splice(i,1);continue;}
-    e.shootCD--;
-    if(e.shootCD<=0&&e.x<LW-10&&e.x>40){
-      G.ebuls.push({x:e.x-5,y:e.y,vx:-2.4,vy:(p.y-e.y)*.015});
-      e.shootCD=80+Math.random()*60;
-      bip(400,.08,.1,'sawtooth',500,200);
+    const _t=e.type||'pirate';
+    e.t++;e.flash*=.8;
+
+    // === AI движения и стрельбы ===
+    if(_t==='pirate'){
+      e.vy=Math.sin(e.t*.05)*.7;
+      e.x+=e.vx;e.y+=e.vy;
+      e.shootCD--;
+      if(e.shootCD<=0&&e.x<LW-10&&e.x>40){
+        G.ebuls.push({x:e.x-5,y:e.y,vx:-2.4,vy:(p.y-e.y)*.015});
+        e.shootCD=80+Math.random()*60;
+        bip(400,.08,.1,'sawtooth',500,200);
+      }
+    } else if(_t==='tank'){
+      e.vy=Math.sin(e.t*.03)*.3;
+      e.x+=e.vx;e.y+=e.vy;
+      e.shootCD--;
+      if(e.shootCD<=0&&e.x<LW-10&&e.x>20){
+        G.ebuls.push({x:e.x-9,y:e.y,vx:-1.6,vy:(p.y-e.y)*.012,kind:'bigshell',dmg:8});
+        e.shootCD=60+Math.random()*30;
+        bip(180,.18,.18,'sawtooth',280,80);
+      }
+    } else if(_t==='drone'){
+      // Лёгкое самонаведение на игрока
+      const dx=p.x-e.x,dy=p.y-e.y,d=Math.hypot(dx,dy)||1;
+      e.vx=-1.2+dx/d*0.3;
+      e.vy=dy/d*1.0;
+      e.x+=e.vx;e.y+=e.vy;
+      // Хвост частиц
+      if(e.t%4===0)PTS.push({x:e.x+3,y:e.y,vx:1.5,vy:(Math.random()-.5)*.2,lf:8,ml:12,col:P.L1L,sz:1,gv:0,fade:.6});
+    } else if(_t==='sniper'){
+      // Дрейф внутрь до x=LW-25, потом стоит
+      if(e.x>LW-25)e.x+=e.vx;
+      // Цикл зарядки: 0..60 — телеграф, 60 — выстрел, -120..0 — перезарядка
+      const ch=e.chargeT;
+      if(ch>=0&&ch<60){
+        if(ch===0)e.targetY=p.y; // фиксируем цель в начале зарядки
+        e.chargeT=ch+1;
+      } else if(ch===60){
+        // Выстрел!
+        G.ebuls.push({x:e.x-9,y:e.targetY,vx:-5,vy:0,kind:'pierce',dmg:15});
+        bip(900,.12,.15,'square',1200,600);
+        e.chargeT=-120;
+      } else {
+        // Перезарядка
+        e.chargeT=ch+1;
+      }
+    } else if(_t==='miniboss'){
+      if(e.phase==='shoot'){
+        e.vy=Math.sin(e.t*.04)*.5;
+        e.x+=e.vx;e.y+=e.vy;
+        e.shootCD--;
+        if(e.shootCD<=0&&e.x<LW-15){
+          // Веер из 3 крупных снарядов
+          for(let k=-1;k<=1;k++){
+            G.ebuls.push({x:e.x-10,y:e.y,vx:-2.2,vy:k*0.6+(p.y-e.y)*.008,kind:'bigshell',dmg:6});
+          }
+          e.shootCD=80;
+          bip(160,.2,.2,'sawtooth',240,80);
+        }
+        // Переход в фазу тарана при HP<50%
+        if(e.hp<=e.maxHp*0.5&&!e._raged){
+          e._raged=true;e.phase='ram';
+          G.notif='МИНИ-БОСС ИДЁТ НА ТАРАН!';G.notifT=80;G.notifCol=P.RED;
+          shake(5);sfxBoss();
+        }
+      } else if(e.phase==='ram'){
+        // Преследование игрока с ускорением
+        const dx=p.x-e.x,dy=p.y-e.y,d=Math.hypot(dx,dy)||1;
+        e.vx=-1.5+dx/d*0.5;
+        e.vy=dy/d*0.8;
+        e.x+=e.vx;e.y+=e.vy;
+      }
     }
-    if(p.inv<=0&&Math.abs(p.x-e.x)<10&&Math.abs(p.y-e.y)<7){
+
+    // === Уход за экран — несколько типов имеют разную «зону живучести» слева ===
+    const offX=(_t==='drone')?-10:(_t==='miniboss')?-25:-15;
+    if(e.x<offX){
+      if(_t==='sniper')G._sniperAlive=false;
+      G.enms.splice(i,1);
+      continue;
+    }
+
+    // === Столкновение с игроком — per-type урон тарана ===
+    let hbW,hbH,ramDmg;
+    if(_t==='tank'){      hbW=14;hbH=10;ramDmg=22; }
+    else if(_t==='drone'){ hbW=5; hbH=4; ramDmg=5;  }
+    else if(_t==='sniper'){ hbW=10;hbH=4; ramDmg=15; }
+    else if(_t==='miniboss'){ hbW=18;hbH=12;ramDmg=25; }
+    else { hbW=10;hbH=7;ramDmg=15; } // пират
+
+    if(p.inv<=0&&Math.abs(p.x-e.x)<hbW&&Math.abs(p.y-e.y)<hbH){
       if(p.shield>0){
         sfxShield();flash(.3,P.CYA);shake(2);
         p.shield=0;p.inv=25;
         addShockwave(e.x,e.y,12,P.CYA);
-      }else{
-        p.hp-=15;p.inv=55;p.squash=6;
+      } else {
+        p.hp-=ramDmg;p.inv=55;p.squash=6;
         shake(5);flash(.4,P.HP);sfxHit();G.combo=0;hitStopAdd(4);
       }
       spPts(e.x,e.y,12,[P.PIR3,P.ORA,P.WHT],.5,3,20);
       addShockwave(e.x,e.y,14,P.PIR3);
-      sfxX(.7);G.enms.splice(i,1);
+      sfxX(.7);
+      // Большинство врагов взрывается при таране (как пират изначально).
+      // Мини-босс — выживает и отскакивает (knockback).
+      if(_t==='miniboss'){
+        e.x+=10;
+      } else {
+        if(_t==='sniper')G._sniperAlive=false;
+        G.enms.splice(i,1);
+      }
     }
   }
 
-  // Обновление вражеских снарядов
+  // ★ Обновление вражеских снарядов — учитывается b.dmg и тип (bigshell/pierce крупнее/опаснее)
   for(let i=G.ebuls.length-1;i>=0;i--){
     const b=G.ebuls[i];
     b.x+=b.vx;b.y+=b.vy;
     if(b.x<-10||b.x>LW+10||b.y<10||b.y>LH-10){G.ebuls.splice(i,1);continue;}
-    if(p.inv<=0&&Math.hypot(p.x-b.x,p.y-b.y)<(b.kind==='laser'?10:8)){
+    // Хитбокс зависит от типа: лазер 10, bigshell 11, остальные 8
+    const hbR=b.kind==='laser'?10:b.kind==='bigshell'?11:8;
+    if(p.inv<=0&&Math.hypot(p.x-b.x,p.y-b.y)<hbR){
       if(p.shield>0){
         sfxShield();flash(.2,P.CYA);p.shield=0;p.inv=20;
-      }else{
-        p.hp-=8;p.inv=40;p.squash=5;shake(3);flash(.3,P.HP);sfxHit();G.combo=0;
+      } else {
+        const dmg=b.dmg||8;
+        p.hp-=dmg;p.inv=40;p.squash=5;
+        shake(b.kind==='pierce'?5:3);flash(.3,P.HP);sfxHit();G.combo=0;
+        if(b.kind==='pierce'||b.kind==='bigshell')hitStopAdd(3);
       }
       spPts(b.x,b.y,6,[P.PIR3,P.YEL,P.WHT],.4,2,12);
       G.ebuls.splice(i,1);
@@ -497,7 +702,7 @@ function drwSpace(G){rc(0,0,LW,LH,P.BG);applyShake();drwNebula();drwStars();
   for(const r of G.rits)drwRes(r);
   for(const a of G.asts)drwAst(a);
   for(const b of G.buls)drwBul(b);
-  for(const e of G.enms)drwPirate(e);
+  for(const e of G.enms)drwEnemy(e);
   for(const b of G.ebuls)drwEnemyBul(b);
   drwPts();drwSHK();
   let shipA=1;
