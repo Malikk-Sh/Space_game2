@@ -6,30 +6,23 @@
 // ============================================================
 
 function drwWorkerHUD(G){if(USE_TOUCH_UI){const bx=LW-20,by=4,t=G.sT;const run=Math.floor(t/6)%4;cx.fillStyle=P.SH1;cx.fillRect(bx,by+2,2,3);cx.fillRect(bx,by,2,2);if(run===0){cx.fillRect(bx-1,by+5,1,2);cx.fillRect(bx+2,by+5,1,2);}else{cx.fillRect(bx-1,by+5,1,2);cx.fillRect(bx+2,by+5,2,1);}txt('+'+G.pl.workers,bx+4,by+1,P.EN,1);return;}}
-function drwHUD(G){const p=G.pl;rc(0,0,LW,16,P.UIB);rc(0,15,LW,1,P.DIM);txt('ХП',2,3,P.UIT2,1);bar(14,3,42,5,p.hp/p.mhp,p.hp/p.mhp<.3?P.HPH:P.HP,P.HPB,P.DIM);txt('ЭН',2,10,P.UIT2,1);bar(14,10,42,4,p.en/p.men,p.en<20?P.ENL:P.EN,P.DIM2,P.DIM);let ix=58;if(p.shield>0){const a=.6+.4*Math.sin(G.sT*.2);cx.globalAlpha=a;ring(ix+2,5,3,P.CYA,1);cx.globalAlpha=1;bar(ix,9,5,1,p.shield/600,P.CYA,P.DIM2);ix+=8;}const pbx=Math.max(62,ix),pby=4,pbw=140-(ix-62);rc(pbx,pby,pbw,6,P.SCAN);const fw=Math.floor(pbw*G.prog);rc(pbx,pby,fw,6,P.PL1);if(fw>1)rc(pbx,pby,fw,1,P.PL2);cx.strokeStyle=P.DIM;cx.lineWidth=.5;cx.strokeRect(pbx+.5,pby+.5,pbw-1,5);const boostPix=(G.pl.boost>0)?2:0;const shipPx=pbx+Math.max(0,Math.min(pbw-3,(fw-3)+boostPix));rc(shipPx,pby,3,1,P.CYA);rc(shipPx+1,pby+1,2,1,P.WHT);rc(shipPx,pby+2,3,1,P.CYA);const destInfo=PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh;txt(destInfo.name,pbx+pbw+2,pby-1,P.PL2,1);if(G.combo>1){const cxx=pbx+pbw+2;txs('x'+G.combo,cxx,pby+5,G.combo>=5?P.YEL:P.UIT2,P.BLK,1);}/* ★ Читаемая подпись текущего оружия вместо иконок L1/L2.
-   Активное оружие подсвечено цветом, неактивное (но разблокированное) — тусклое.
-   Стоимость энергии добавлена справа от названия, чтобы игрок понимал расход. */
-const wc=[P.L1,P.L3],wLabels=['L1','L2'],wcost=[8,55];
-const strongUnlocked=G.campaignState.inventory.laserStrong;
-const activeIdx=Math.min(1,p.wep-1);
-const activeName='ЛАЗЕР '+wLabels[activeIdx];
-const activeCol=wc[activeIdx];
+function drwHUD(G){const p=G.pl;rc(0,0,LW,16,P.UIB);rc(0,15,LW,1,P.DIM);txt('ХП',2,3,P.UIT2,1);bar(14,3,42,5,p.hp/p.mhp,p.hp/p.mhp<.3?P.HPH:P.HP,P.HPB,P.DIM);txt('ЭН',2,10,P.UIT2,1);bar(14,10,42,4,p.en/p.men,p.en<20?P.ENL:P.EN,P.DIM2,P.DIM);let ix=58;if(p.shield>0){const a=.6+.4*Math.sin(G.sT*.2);cx.globalAlpha=a;ring(ix+2,5,3,P.CYA,1);cx.globalAlpha=1;bar(ix,9,5,1,p.shield/600,P.CYA,P.DIM2);ix+=8;}const pbx=Math.max(62,ix),pby=4,pbw=140-(ix-62);rc(pbx,pby,pbw,6,P.SCAN);const fw=Math.floor(pbw*G.prog);rc(pbx,pby,fw,6,P.PL1);if(fw>1)rc(pbx,pby,fw,1,P.PL2);cx.strokeStyle=P.DIM;cx.lineWidth=.5;cx.strokeRect(pbx+.5,pby+.5,pbw-1,5);const boostPix=(G.pl.boost>0)?2:0;const shipPx=pbx+Math.max(0,Math.min(pbw-3,(fw-3)+boostPix));rc(shipPx,pby,3,1,P.CYA);rc(shipPx+1,pby+1,2,1,P.WHT);rc(shipPx,pby+2,3,1,P.CYA);const destInfo=PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh;txt(destInfo.name,pbx+pbw+2,pby-1,P.PL2,1);if(G.combo>1){const cxx=pbx+pbw+2;txs('x'+G.combo,cxx,pby+5,G.combo>=5?P.YEL:P.UIT2,P.BLK,1);}/* ★ Phase 2.2: 6 слотов оружия. Активное — название+стоимость EN.
+   Под названием — компактная панель индикаторов 1..6: заблокированные тусклые, разблокированные цветные, текущий обведён жёлтым. */
+const _haveWeapons=(typeof WEAPONS!=='undefined');
+const activeIdxNew=_haveWeapons?(p.wepIdx||0):0;
+const activeWep=_haveWeapons?WEAPONS[activeIdxNew]:null;
+const activeName=activeWep?activeWep.name:'ЛАЗЕР L1';
+const activeCol=activeWep?activeWep.col:P.L1;
+const activeEN=activeWep?activeWep.en:10;
 if(!USE_TOUCH_UI){
-  // Подпись активного оружия и стоимости
+  // Название активного оружия + стоимость EN
   txs(activeName,pbx,10,activeCol,P.BLK,1);
-  txt(wcost[activeIdx]+'EN',pbx+gw(activeName)+3,10,p.en>=wcost[activeIdx]?P.UIT2:P.HPH,1);
-  // Маленький намёк, если второе оружие разблокировано — "[2]" тускло
-  if(strongUnlocked){
-    const hintX=pbx+gw(activeName)+gw(wcost[activeIdx]+'EN')+8;
-    const otherIdx=1-activeIdx;
-    txt((otherIdx+1)+':'+wLabels[otherIdx],hintX,10,P.DIM,1);
-  }
+  txt(activeEN+'EN',pbx+gw(activeName)+3,10,p.en>=activeEN?P.UIT2:P.HPH,1);
   txt('КР:'+p.cr,pbx+pbw+26,2,P.YEL,1);
   txt('РЕ:'+p.res,pbx+pbw+26,9,P.RES,1);
 }else{
   txt('КР:'+p.cr,pbx,10,P.YEL,1);
   txt('РЕ:'+p.res,pbx+34,10,P.RES,1);
-  // На тач — только название активного оружия (переключение через action-кнопку)
   txs(activeName,pbx+74,10,activeCol,P.BLK,1);
 }if(G.ship){const fy=18;const fc=G.ship.fuel<20?P.RED:P.ORA;cx.globalAlpha=.92;rc(2,fy,54,7,P.UIB);txt('ТОПЛ',4,fy+1,P.UIT2,1);bar(25,fy+1,28,4,G.ship.fuel/100,fc,P.DIM2,P.DIM);if(G.ship.fuel<1&&Math.floor(G.sT/12)%2)txs('АВАР.ХОД',58,fy+1,P.RED,P.BLK,1);cx.globalAlpha=1;}drwWorkerHUD(G);}
 function drwJoystick(){if(!USE_TOUCH_UI||!ALLOW_JOY)return;if(!TOUCH.joyActive){const bx=38,by=LH-38;cx.globalAlpha=.25;ring(bx,by,22,P.UIT2,1);ring(bx,by,8,P.UIT2,1);cx.globalAlpha=.4;txt('MOVE',bx-9,by+26,P.UIT2,1);cx.globalAlpha=1;}else{cx.globalAlpha=.5;disc(TOUCH.joyBaseX|0,TOUCH.joyBaseY|0,22,'#001122');ring(TOUCH.joyBaseX|0,TOUCH.joyBaseY|0,22,P.UIT,1);cx.globalAlpha=1;cx.globalAlpha=.85;disc(TOUCH.joyX|0,TOUCH.joyY|0,9,P.UIT);disc(TOUCH.joyX|0,TOUCH.joyY|0,6,P.UIT2);cx.globalAlpha=1;}}

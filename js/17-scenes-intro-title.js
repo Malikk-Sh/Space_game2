@@ -1240,7 +1240,10 @@ function devTeleport(G,dest){
   if(dest==='tina'){
     fl.krzQuestStarted=true;G.krasnozemDone=true;
     inv.laserStrong=true;inv.shieldBlueprint=true;inv.shieldBuilt=true;inv.starBattery=true;
-    G.pl.wep=2;G.pl.mhp=360;G.pl.hp=360;G.pl.men=200;G.pl.en=200;
+    // ★ Phase 2.2: dev-меню разблокирует все 6 оружий и даёт материалов
+    inv.spreadUnlocked=true;inv.missileUnlocked=true;inv.beamUnlocked=true;inv.burstUnlocked=true;
+    G.campaignState.materials=(G.campaignState.materials||0)+10;
+    G.pl.wep=2;G.pl.wepIdx=3;G.pl.mhp=360;G.pl.hp=360;G.pl.men=200;G.pl.en=200;
     G.pl.cr=300;G.pl.res=15;G.pl.workers=4;
     ensureVisited('krasnozem');ensureCompleted('krasnozem');
     G.campaignState.currentPlanet='krasnozem';

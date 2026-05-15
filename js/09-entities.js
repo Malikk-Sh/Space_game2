@@ -1316,7 +1316,44 @@ return;
 cx.globalAlpha=.5;disc(x,y,6,'#551100');cx.globalAlpha=1;disc(x,y,3,P.TINA3);rc(x-1,y-1,3,3,P.YEL);if(Math.random()<.7)PTS.push({x,y,vx:(Math.random()-.5)*.8,vy:(Math.random()-.5)*.8,lf:10,ml:12,col:P.TINA,sz:1,gv:0,fade:.6});return;}if(b.kind==='energyBurst'){// ★ v24b: Точечный энерговсплеск — крупный пульсирующий шар
 const ep=.6+.4*Math.sin(Date.now()*.025);cx.globalAlpha=ep*.45;disc(x,y,9,'#ff6600');cx.globalAlpha=ep*.8;disc(x,y,5,P.TINA3);cx.globalAlpha=1;disc(x,y,2,'#ffff88');if(Math.random()<.8)PTS.push({x,y,vx:(Math.random()-.5)*1.2,vy:(Math.random()-.5)*1.2,lf:8,ml:11,col:Math.random()<.5?P.ORA:P.YEL,sz:1,gv:0,fade:.65});return;}if(b.kind==='spiral'){// Спиральный снаряд ТИНЫ
 const pulse=.7+.3*Math.sin(Date.now()*.02);cx.globalAlpha=pulse*.8;disc(x,y,4,'#330022');cx.globalAlpha=1;disc(x,y,2,'#ff44ff');if(Math.random()<.5)PTS.push({x,y,vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.5,lf:8,ml:10,col:'#ff44ff',sz:1,gv:0,fade:.7});return;}rc(x-2,y-1,4,2,P.PIR3);rc(x-1,y,2,1,'#ffcc88');if(Math.random()<.6)PTS.push({x:x+2,y:y,vx:0.3+Math.random(),vy:(Math.random()-.5)*.2,lf:8,ml:10,col:'#882211',sz:1,gv:0,fade:.6});}
-function drwBul(b){const x=b.x|0,y=b.y|0;if(b.lv===1){cx.globalAlpha=.4;rc(x-1,y-2,9,4,P.L1L);cx.globalAlpha=1;rc(x,y-1,7,2,P.L1);rc(x+2,y,3,1,P.WHT);rc(x+6,y-1,2,2,P.L1L);}else if(b.lv===2){cx.globalAlpha=.35;rc(x-1,y-3,12,7,P.L2L);cx.globalAlpha=1;rc(x,y-2,9,5,P.L2);rc(x+1,y-1,7,3,P.L2L);rc(x+3,y,4,1,P.WHT);rc(x+9,y-1,2,2,P.WHT);if(Math.random()<.5)PTS.push({x,y:y+(Math.random()-.5)*4,vx:-1,vy:0,lf:6,ml:8,col:P.L2L,sz:1,gv:0,fade:.8});}else{cx.globalAlpha=.3;rc(x-2,y-6,19,13,P.L3L);cx.globalAlpha=1;rc(x,y-4,14,9,P.L3);rc(x+1,y-3,12,7,P.L3L);rc(x+3,y-1,8,3,P.WHT);rc(x+14,y-2,3,2,P.L3);rc(x+15,y,3,2,P.L3L);rc(x+14,y+2,3,2,P.L3);if(Math.random()<.7)PTS.push({x:x+Math.random()*8,y:y+(Math.random()-.5)*6,vx:-1-Math.random(),vy:(Math.random()-.5)*.6,lf:10,ml:14,col:Math.random()<.5?P.L3L:P.L3,sz:1,gv:0,fade:.7});}}
+function drwBul(b){
+  const x=b.x|0,y=b.y|0;
+  // ★ Луч — растянутая зелёная полоса с белым ядром
+  if(b.beam){
+    cx.globalAlpha=.4;rc(x-2,y-1,12,3,P.L2L);cx.globalAlpha=.9;
+    rc(x-1,y,10,1,P.L2);
+    rc(x+2,y,5,1,P.WHT);
+    cx.globalAlpha=1;
+    return;
+  }
+  // ★ Ракета — крупный оранжевый снаряд с горячим хвостом
+  if(b.missile){
+    const ang=Math.atan2(b.vy||0,b.vx||1);
+    cx.save();cx.translate(x,y);cx.rotate(ang);
+    cx.globalAlpha=.4;rc(-4,-3,12,6,'#883300');cx.globalAlpha=1;
+    rc(-3,-2,10,4,P.ORA);
+    rc(-3,-1,2,2,P.RED);              // выхлоп
+    rc(2,-1,5,2,P.YEL);                // центр
+    rc(5,0,3,1,P.WHT);                 // нос
+    cx.restore();
+    if(Math.random()<.7)PTS.push({x:x-(b.vx>0?2:-2),y:y+(Math.random()-.5)*2,vx:-(b.vx||3)*.3,vy:(b.vy||0)*.3+(Math.random()-.5)*.4,lf:10,ml:14,col:Math.random()<.5?P.ORA:P.RED,sz:1,gv:0,fade:.6});
+    return;
+  }
+  // ★ Spread — мелкая голубая пуля, угол по vy
+  if(b.spread){
+    const ang=Math.atan2(b.vy||0,b.vx||1);
+    cx.save();cx.translate(x,y);cx.rotate(ang);
+    cx.globalAlpha=.45;rc(-1,-2,8,4,P.L1L);cx.globalAlpha=1;
+    rc(0,-1,6,2,P.L1);
+    rc(2,0,3,1,P.WHT);
+    cx.restore();
+    return;
+  }
+  // Стандартные уровни лазера (без изменений)
+  if(b.lv===1){cx.globalAlpha=.4;rc(x-1,y-2,9,4,P.L1L);cx.globalAlpha=1;rc(x,y-1,7,2,P.L1);rc(x+2,y,3,1,P.WHT);rc(x+6,y-1,2,2,P.L1L);}
+  else if(b.lv===2){cx.globalAlpha=.35;rc(x-1,y-3,12,7,P.L2L);cx.globalAlpha=1;rc(x,y-2,9,5,P.L2);rc(x+1,y-1,7,3,P.L2L);rc(x+3,y,4,1,P.WHT);rc(x+9,y-1,2,2,P.WHT);if(Math.random()<.5)PTS.push({x,y:y+(Math.random()-.5)*4,vx:-1,vy:0,lf:6,ml:8,col:P.L2L,sz:1,gv:0,fade:.8});}
+  else{cx.globalAlpha=.3;rc(x-2,y-6,19,13,P.L3L);cx.globalAlpha=1;rc(x,y-4,14,9,P.L3);rc(x+1,y-3,12,7,P.L3L);rc(x+3,y-1,8,3,P.WHT);rc(x+14,y-2,3,2,P.L3);rc(x+15,y,3,2,P.L3L);rc(x+14,y+2,3,2,P.L3);if(Math.random()<.7)PTS.push({x:x+Math.random()*8,y:y+(Math.random()-.5)*6,vx:-1-Math.random(),vy:(Math.random()-.5)*.6,lf:10,ml:14,col:Math.random()<.5?P.L3L:P.L3,sz:1,gv:0,fade:.7});}
+}
 function drwRes(r){const x=r.x|0,y=r.y|0,p=r.t%8;cx.globalAlpha=.35+.2*Math.sin(r.t*.15);disc(x,y,4,P.RES);cx.globalAlpha=1;rc(x-1,y-2,3,4,P.RES);rc(x-2,y-1,5,2,P.RES);rc(x,y-1,1,2,P.RES2);rc(x-1+(p<4?1:0),y-2,1,1,'#fff');rc(x,y+1,1,1,P.RES3);}
 function drwPowerUp(pu){const x=pu.x|0,y=pu.y|0,t=pu.t;const pulse=1+.2*Math.sin(t*.2);const col=pu.type==='shield'?P.CYA:pu.type==='health'?P.HP:P.YEL;cx.globalAlpha=.3;disc(x,y,(5*pulse)|0,col);cx.globalAlpha=1;if(pu.type==='shield'){ring(x,y,4,P.CYA,1);ring(x,y,2,P.WHT,1);rc(x,y-1,1,3,P.WHT);}else if(pu.type==='health'){rc(x-1,y-3,3,7,'#880000');rc(x,y-3,1,7,P.HP);rc(x-3,y-1,7,3,'#880000');rc(x-3,y,7,1,P.HP);rc(x,y,1,1,'#fff');}else{rc(x,y-3,1,7,'#003300');rc(x-1,y-3,3,1,P.EN);rc(x-1,y-1,3,1,P.EN);rc(x-1,y+3,3,1,P.EN);rc(x,y-2,1,2,P.EN);rc(x,y,1,3,P.EN);}}
 

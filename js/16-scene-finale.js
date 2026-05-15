@@ -1274,29 +1274,59 @@ function updFinaleTina(G){
   // Без этого после первого попадания p.inv остаётся >0 и блокирует все последующие удары.
   if(p.inv>0)p.inv--;
 
-  // Переключение оружия
-  if(KD.Digit1||KD.Numpad1||btnJust('w1')){p.wep=1;sfxUI();}
-  if(KD.Digit2||KD.Numpad2||btnJust('w2')){p.wep=2;sfxUI();}
+  // ★ Phase 2.2: переключение через тот же диспетчер 1..6 и циклическую кнопку
+  for(let d=0;d<6;d++){
+    if(KD['Digit'+(d+1)]||KD['Numpad'+(d+1)]){_switchWeapon(G,d);break;}
+  }
+  if(btnJust('wcyc'))_cycleWeapon(G);
 
-  // Стрельба
+  // ★ Стрельба — диспетчер по типу оружия. Дальность увеличена (rangeBoost=4) под широкий мир финала.
   p.sCD=Math.max(0,p.sCD-1);
   const firing=K.Space||K.KeyZ||(USE_TOUCH_UI&&TOUCH.fire);
-  // ★ v16 r12 #7: Стрельба заблокирована во время катсцены (emergencyProtocol активен)
-  // — нет звуков, нет снарядов, нет вспышек
   const inCatScene=F.tina&&F.tina.emergencyProtocol;
-  if(firing&&p.sCD===0&&F.battleActive&&!inCatScene){
-    // ★ v16: Базовый лазер - урон x2 (1→2), расход энергии x1.3 (8→10)
-    const ec=[10,44][p.wep-1],cd=[7,28][p.wep-1];
-    if(hasBattery||p.en>=ec){
-      if(!hasBattery)p.en-=ec;
-      p.sCD=cd;
-      // Лазер летит к ТИНЕ
-      // ★ v16 r3: Lf увеличена до 160 чтобы лазеры долетали через широкий мир (1000px)
-      G.buls.push({x:p.x+12,y:p.y,vx:[7,5][p.wep-1],vy:0,lv:p.wep===2?3:1,lf:160,dmg:[2,10][p.wep-1]*_DEV.dmgMult,t:0});
-      sfxL(p.wep);
-      if(p.wep===2){shake(2.5);flash(.2,P.L3L);}
-      spPts(p.x+12,p.y,3,p.wep===1?[P.L1L,P.WHT]:[P.L3L,P.WHT,P.YEL],.3,1.5,6,0);
-    }else if(G.sT%15===0)fText(p.x,p.y-12,'NET EN',P.ENL);
+  // Burst-очередь работает независимо
+  if(p.burstQueue>0&&F.battleActive&&!inCatScene){
+    if(p.burstNext<=0){
+      G.buls.push({x:p.x+12,y:p.y+(Math.random()-.5)*4,vx:7,vy:0,lv:2,lf:160,dmg:3*_DEV.dmgMult,t:0,burst:true});
+      spPts(p.x+12,p.y,2,[P.YEL,P.WHT],.3,1,5,0);sfxL(1);
+      p.burstQueue--;p.burstNext=6;
+    } else p.burstNext--;
+  }
+  if(firing&&F.battleActive&&!inCatScene){
+    const w=(typeof WEAPONS!=='undefined'?WEAPONS[p.wepIdx||0]:null);
+    if(!w){
+      // Fallback на legacy-логику, если WEAPONS почему-то не загружен
+      const ec=[10,44][p.wep-1],cd=[7,28][p.wep-1];
+      if((hasBattery||p.en>=ec)&&p.sCD===0){
+        if(!hasBattery)p.en-=ec;p.sCD=cd;
+        G.buls.push({x:p.x+12,y:p.y,vx:[7,5][p.wep-1],vy:0,lv:p.wep===2?3:1,lf:160,dmg:[2,10][p.wep-1]*_DEV.dmgMult,t:0});
+        sfxL(p.wep);
+        if(p.wep===2){shake(2.5);flash(.2,P.L3L);}
+      }
+    } else if(w.kind==='beam'){
+      if(hasBattery||p.en>=w.en){
+        if(!hasBattery)p.en-=w.en;
+        // В финале луч летит дальше (rangeBoost=4)
+        _fireFromWeapon(G,p,w,4);
+        // Перезаписываем lf и t у только что вставленной пули (для совместимости с финалом)
+        const last=G.buls[G.buls.length-1];if(last){last.t=0;last.vy=0;}
+      } else if(G.sT%15===0)fText(p.x,p.y-12,'NET EN',P.ENL);
+    } else if(w.kind==='burst'){
+      if(p.sCD===0&&p.burstQueue===0){
+        if(hasBattery||p.en>=w.en){
+          if(!hasBattery)p.en-=w.en;p.sCD=w.cd;
+          p.burstQueue=5;p.burstNext=0;shake(2);
+        } else if(G.sT%15===0)fText(p.x,p.y-12,'NET EN',P.ENL);
+      }
+    } else if(p.sCD===0){
+      if(hasBattery||p.en>=w.en){
+        if(!hasBattery)p.en-=w.en;p.sCD=w.cd;
+        _fireFromWeapon(G,p,w,4);
+        // Финал ожидает t:0 и vy:0 на пулях
+        const last=G.buls[G.buls.length-1];
+        if(last){last.t=last.t||0;if(last.vy===undefined)last.vy=0;}
+      } else if(G.sT%15===0)fText(p.x,p.y-12,'NET EN',P.ENL);
+    }
   }
 
   // Обновление снарядов игрока
