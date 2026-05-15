@@ -12,10 +12,12 @@
 // Игрок может пропустить (ENTER/ТАП) после показа подсказки.
 function initIntro(G){
   TAP_FIRE=false;ALLOW_JOY=false;G.state='intro';
-  // Длительности сцен (60Гц). Разумные паузы для каждого нарративного бита.
+  // Длительности сцен (60Гц). ★ Phase 3.4: интро сокращено с ~3 мин до ~48 сек.
+  // Раньше: [160,310,210,270,370,270,270,230,270,270,250,1510,230] (~3 мин)
+  // Теперь: [300,120,120,180,280,150,220,100,200,150,180,700,200] (~48 сек) согласно ROADMAP
   // [titlecard, peace, warning, pirates, sphere_build, tina_done, frozen_planets,
   //  time_skip, ship_arrives, detect_alien, pickup, cockpit_dialog, mission_map]
-  const dur=[160,310,210,270,370,270,270,230,270,270,250,1510,230];
+  const dur=[300,120,120,180,280,150,220,100,200,150,180,700,200];
   G.intro={
     sceneIdx:0,sceneT:0,totalT:0,
     skipShown:false,
@@ -322,7 +324,11 @@ function updIntro(G){
   }
   // Сцена 5 — Тина готова, лучи выкачивают свет
   if(s===5){
-    if(t%5===0){
+    // ★ Phase 3.4: мощный «момент активации» — shake + flash в начале сцены
+    if(t===1){shake(3);flash(.4,P.RED);}
+    if(t===20){shake(2);flash(.25,P.ORA);}
+    // Больше частиц при активации (раньше каждые 5 кадров, теперь каждые 3)
+    if(t%3===0){
       const a=Math.random()*Math.PI*2;
       PTS.push({x:I.starX+Math.cos(a)*30,y:I.starY+Math.sin(a)*30,vx:Math.cos(a)*1.2,vy:Math.sin(a)*1.2,lf:80,ml:90,col:'#ffaa44',sz:1,gv:0,fade:.4});
     }
@@ -391,14 +397,15 @@ function updIntro(G){
       ['РАЙГАР:','ТЫ - НАША ПОСЛЕДНЯЯ НАДЕЖДА.'],             // 11
       ['ПИЛОТ:','...ПРИНЯТО. КУРС НА ТИНУ.'],                 // 12
     ];
-    const stepLen=110;  // дольше держим каждую реплику на экране
+    // ★ Phase 3.4: ускорение диалога кокпита — общая длительность сократилась с 1510 до 700 кадров
+    const stepLen=54;   // раньше 110 — каждая реплика держится короче
     const newStep=Math.min(lines.length-1,Math.floor(I.dialogT/stepLen));
     if(newStep!==I.dialogStep){
       I.dialogStep=newStep;I.dialogChar=0;
     }
     const curLine=lines[I.dialogStep]?lines[I.dialogStep][1]:'';
-    // Печать символов: чуть медленнее (раз в 3 кадра вместо 2)
-    if(I.dialogChar<curLine.length&&I.dialogT%3===0){
+    // Печать символов: 1 символ за кадр (TYPE_RATE 1.4 → 2.5 эквивалент)
+    if(I.dialogChar<curLine.length){
       I.dialogChar++;
     }
   }
@@ -415,6 +422,8 @@ function updIntro(G){
 function drwIntro(G){
   const I=G.intro,t=I.sceneT,s=I.sceneIdx,T=I.totalT;
   rc(0,0,LW,LH,P.BG);
+  // ★ Phase 3.4: применяем screen-shake (поднимается на сцене 5 при активации Тины)
+  applyShake();
 
   // ===== СЦЕНА 0: ЗАГЛАВИЕ =====
   if(s===0){
@@ -576,6 +585,12 @@ function drwIntro(G){
   // ===== СЦЕНА 4: ПОСТРОЕНИЕ СФЕРЫ =====
   else if(s===4){
     drwStars();drwPts();
+    // ★ Phase 3.4: zoom-in на сборку сферы — от 0.5x до 1.5x за длительность сцены
+    const _z=0.5+(t/I.durations[4])*1.0;
+    cx.save();
+    cx.translate(I.starX,I.starY);
+    cx.scale(_z,_z);
+    cx.translate(-I.starX,-I.starY);
     drwCutsceneStar(I.starX,I.starY,16,I.starBright,T,I.starBright>0.5);
     // Куски сферы летят к звезде
     for(const sp of I.spherePieces){
@@ -600,7 +615,8 @@ function drwIntro(G){
       rc(2,-2,1,1,'#ffaa44');
       cx.restore();
     }
-    // Текст — поэтапно
+    cx.restore();  // конец zoom-трансформа
+    // Текст — поэтапно (рисуется в screen-space, не масштабируется)
     if(t>50){
       const a=Math.min(1,(t-50)/45);cx.globalAlpha=a;
       txcs('ОНИ ЗАКОВАЛИ ЗВЕЗДУ',LH-26,'#ff8866',P.BLK,1);
@@ -1064,6 +1080,9 @@ function drwIntro(G){
     rc(0,LH-1,fw,1,P.UIT3);
   }
 
+  // ★ Phase 3.4: завершение screen-shake + рендер flash-эффекта поверх сцены
+  clearShake();
+  drawFlash();
   drawTrans();
 }
 // ======= /КАТСЦЕНА =======
