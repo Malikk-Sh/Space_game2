@@ -45,6 +45,109 @@ function drwShipSharp(F,G,scale){
 function drwAst(a){const x=a.x|0,y=a.y|0,s=a.s;const rot=(a.rot||0)%6;rc(x-s+1,y-s,s*2-2,s*2,P.A1);rc(x-s,y-s+1,s*2,s*2-2,P.A1);rc(x-s+1,y-s+1,s-1,s-1,P.A2);rc(x+1,y+1,s-2,s-2,P.A2);rc(x-s+2,y-s+2,Math.max(1,s>>1),1,P.A3);rc(x-s+1,y-s+3,1,Math.max(1,s>>1),P.A3);rc(x+s-2,y+s-2,1,1,P.A4);rc(x-s,y+s-1,1,1,P.A4);cx.fillStyle=P.A2;for(const cr of a.cracks)cx.fillRect(x+((cr[0]+rot)%(s*2)-s|0),y+((cr[1]+rot)%(s*2)-s|0),1,1);if(a.hp<a.maxHp){const bw=s*2,ratio=a.hp/a.maxHp;rc(x-s,y-s-3,bw,1,'#220000');rc(x-s,y-s-3,(bw*ratio)|0,1,ratio>.5?P.GRN:ratio>.25?P.YEL:P.RED);}if(a.flash>0){cx.globalAlpha=a.flash;cx.fillStyle='#fff';cx.fillRect(x-s,y-s,s*2,s*2);cx.globalAlpha=1;a.flash*=.7;}}
 function drwPirate(e){const x=e.x|0,y=e.y|0,t=e.t;rc(x-5,y-3,10,6,P.PIR);rc(x-6,y-1,12,2,P.PIR);rc(x-4,y-4,8,1,P.PIR2);rc(x-4,y+3,8,1,P.PIR2);const blink=Math.floor(t/20)%5===0;if(!blink){rc(x-1,y-1,3,2,P.PIR3);rc(x,y-1,1,1,'#ffddaa');}rc(x+5,y-3,2,1,'#222');rc(x+5,y+2,2,1,'#222');rc(x-8,y-2,3,1,P.PIR2);rc(x-8,y+1,3,1,P.PIR2);if(t%6<3)rc(x+7,y-1,2,2,P.L3);if(e.flash>0){cx.globalAlpha=e.flash;cx.fillStyle='#fff';cx.fillRect(x-8,y-4,16,9);cx.globalAlpha=1;e.flash*=.7;}if(e.hp<e.maxHp){rc(x-6,y-6,12,1,'#220000');rc(x-6,y-6,(12*(e.hp/e.maxHp))|0,1,P.RED);}}
 
+// ★ Танк — широкий, угловатый, медленный. Тёмно-красный корпус с пульсирующим ядром.
+function drwTank(e){
+  const x=e.x|0,y=e.y|0,t=e.t;
+  rc(x-10,y-3,20,6,P.PIR2);
+  rc(x-9,y-5,18,10,P.PIR2);
+  rc(x-8,y-6,16,1,'#331108');
+  rc(x-8,y+5,16,1,'#331108');
+  rc(x-7,y-4,14,8,P.PIR);
+  rc(x-5,y-4,1,1,'#552010');rc(x+4,y-4,1,1,'#552010');
+  rc(x-5,y+3,1,1,'#552010');rc(x+4,y+3,1,1,'#552010');
+  const pulse=.6+.4*Math.sin(t*.15);
+  cx.globalAlpha=pulse;disc(x,y,3,P.YEL);cx.globalAlpha=1;
+  rc(x-1,y-1,3,3,P.RED);
+  rc(x,y,1,1,P.WHT);
+  rc(x-13,y-1,5,3,'#222');
+  rc(x-15,y,2,1,P.PIR3);
+  if(t%6<3)rc(x+9,y-1,3,3,P.L3);
+  if(e.flash>0){cx.globalAlpha=e.flash;cx.fillStyle='#fff';cx.fillRect(x-11,y-7,22,15);cx.globalAlpha=1;e.flash*=.7;}
+  if(e.hp<e.maxHp){rc(x-9,y-9,18,1,'#220000');rc(x-9,y-9,(18*(e.hp/e.maxHp))|0,1,P.RED);}
+}
+
+// ★ Дрон-камикадзе — маленький синий треугольник со светящимся хвостом.
+function drwDrone(e){
+  const x=e.x|0,y=e.y|0;
+  cx.globalAlpha=.5;rc(x+2,y-1,5,3,P.L1L);cx.globalAlpha=1;
+  rc(x,y-2,4,1,P.L1);
+  rc(x-1,y-1,5,1,P.L1);
+  rc(x-2,y,6,1,P.L1L);
+  rc(x-1,y+1,5,1,P.L1);
+  rc(x,y+2,4,1,P.L1);
+  rc(x,y,1,1,P.WHT);
+  if(e.flash>0){cx.globalAlpha=e.flash;cx.fillStyle='#fff';cx.fillRect(x-3,y-3,8,7);cx.globalAlpha=1;e.flash*=.7;}
+}
+
+// ★ Снайпер — тонкий корпус с оптикой. Во время зарядки виден красный луч-телеграф.
+function drwSniper(e){
+  const x=e.x|0,y=e.y|0,ch=e.chargeT||0;
+  rc(x-8,y-2,16,4,'#331a44');
+  rc(x-8,y-1,16,2,'#553366');
+  rc(x-6,y-3,12,1,'#221033');
+  rc(x-6,y+2,12,1,'#221033');
+  const scopeCol=(ch>=0&&ch<60)?P.RED:P.PUR2;
+  rc(x-3,y-1,3,3,scopeCol);
+  rc(x-2,y,1,1,P.YEL);
+  rc(x-12,y,4,1,'#222');
+  if(ch>=0&&ch<60){
+    const intensity=ch/60;
+    const ty=(e.targetY!=null)?(e.targetY|0):y;
+    cx.globalAlpha=.2+intensity*.35;
+    cx.fillStyle=P.RED;
+    cx.fillRect(0,ty,x-12,1);
+    if(Math.floor(ch/4)%2===0){
+      cx.globalAlpha=.7+intensity*.3;
+      rc(8,ty-1,3,3,P.RED);
+      rc(9,ty,1,1,P.YEL);
+    }
+    cx.globalAlpha=1;
+  }
+  if(e.flash>0){cx.globalAlpha=e.flash;cx.fillStyle='#fff';cx.fillRect(x-10,y-4,20,8);cx.globalAlpha=1;e.flash*=.7;}
+  if(e.hp<e.maxHp){rc(x-8,y-6,16,1,'#220000');rc(x-8,y-6,(16*(e.hp/e.maxHp))|0,1,P.RED);}
+}
+
+// ★ Мини-босс — большой пиратский крейсер. В фазе тарана светится красным.
+function drwMiniboss(e){
+  const x=e.x|0,y=e.y|0,t=e.t,ramming=e.phase==='ram';
+  if(ramming){
+    const r=1+.3*Math.sin(t*.4);
+    cx.globalAlpha=.3*r;disc(x,y,18,P.RED);cx.globalAlpha=1;
+  }
+  rc(x-14,y-3,28,6,P.PIR2);
+  rc(x-12,y-7,24,14,P.PIR2);
+  rc(x-10,y-9,20,2,P.PIR);
+  rc(x-10,y+7,20,2,P.PIR);
+  rc(x-9,y-5,18,10,P.PIR);
+  cx.fillStyle='#1a0604';
+  cx.fillRect(x-7,y-4,1,3);cx.fillRect(x-6,y-3,1,1);
+  cx.fillRect(x+4,y+2,1,3);cx.fillRect(x+5,y+3,1,1);
+  rc(x-2,y-2,5,4,ramming?P.RED:P.PIR3);
+  if(Math.floor(t/8)%4!==0)rc(x-1,y-1,3,2,'#ffddaa');
+  rc(x-1,y-11,1,3,'#222');
+  rc(x,y-11,t%30<15?3:2,2,P.RED);
+  rc(x-16,y-4,4,2,'#331108');
+  rc(x-16,y+2,4,2,'#331108');
+  if(t%4<2)rc(x+12,y-2,3,4,P.L3);
+  if(t%6<3)rc(x+15,y-1,2,2,P.YEL);
+  if(e.flash>0){cx.globalAlpha=e.flash;cx.fillStyle='#fff';cx.fillRect(x-16,y-10,32,20);cx.globalAlpha=1;e.flash*=.7;}
+  if(e.hp<e.maxHp){
+    rc(x-14,y-13,28,2,'#220000');
+    rc(x-14,y-13,(28*(e.hp/e.maxHp))|0,2,ramming?P.RED:P.HP);
+  }
+}
+
+// ★ Диспетчер рендера — по e.type. Без type → пират (обратная совместимость).
+function drwEnemy(e){
+  switch(e.type){
+    case 'tank':     drwTank(e);     break;
+    case 'drone':    drwDrone(e);    break;
+    case 'sniper':   drwSniper(e);   break;
+    case 'miniboss': drwMiniboss(e); break;
+    default:         drwPirate(e);   break;
+  }
+}
+
 // ======== TINA BOSS DRAW ========
 // ★ v16 r3: Энергоблоки крупнее (масштаб с Тиной), проработанный пиксель-арт
 function drwEnergyBlock(eb,t){
@@ -1168,7 +1271,26 @@ function drwEmergencyProtocol(b,t){
 function easeOutCube(t){t=Math.max(0,Math.min(1,t));return 1-Math.pow(1-t,3);}
 
 function drwPirateBoss(b){const x=b.x|0,y=b.y|0,t=b.t||0;rc(x-72,y-40,144,80,'#2a0c08');rc(x-66,y-34,132,68,P.PIR2);for(let i=0;i<13;i++){const ox=-60+i*10;rc(x+ox,y-30,7,58,(i%2)?'#4a160e':'#5a1c10');}rc(x-78,y-8,16,16,P.PIR3);rc(x+62,y-8,16,16,P.PIR3);rc(x-20,y-14,40,28,'#220707');rc(x-14,y-9,28,18,'#44110c');if(t%8<4){rc(x-6,y-2,12,6,'#ffcc88');}for(let i=0;i<8;i++){const yy=y-30+i*9;rc(x-82,yy,10,4,'#77220f');rc(x+72,yy,10,4,'#77220f');}if(b.hp<b.mhp){rc(x-72,y-47,144,4,'#220000');rc(x-72,y-47,(144*(b.hp/b.mhp))|0,4,P.RED);}}
-function drwEnemyBul(b){const x=b.x|0,y=b.y|0;if(b.kind==='meteor'){
+function drwEnemyBul(b){const x=b.x|0,y=b.y|0;
+// ★ Танковый снаряд — крупный, медленный, с тёмным ядром и горячим центром.
+if(b.kind==='bigshell'){
+  cx.globalAlpha=.5;disc(x,y,5,'#220000');cx.globalAlpha=1;
+  disc(x,y,3,P.PIR2);
+  rc(x-1,y-1,3,3,P.PIR3);
+  rc(x,y,1,1,P.YEL);
+  if(Math.random()<.5)PTS.push({x:x+2,y:y+(Math.random()-.5)*2,vx:0.5+Math.random(),vy:(Math.random()-.5)*.3,lf:10,ml:14,col:'#661108',sz:1,gv:0,fade:.6});
+  return;
+}
+// ★ Снайперский снаряд — тонкая ярко-красная игла с тянущимся шлейфом.
+if(b.kind==='pierce'){
+  cx.globalAlpha=.5;rc(x-1,y,8,1,P.RED);cx.globalAlpha=1;
+  rc(x,y,5,1,P.YEL);
+  rc(x+1,y,3,1,P.WHT);
+  rc(x-2,y,1,1,P.RED);
+  if(Math.random()<.7)PTS.push({x:x+4,y,vx:1+Math.random(),vy:(Math.random()-.5)*.1,lf:5,ml:7,col:P.RED,sz:1,gv:0,fade:.7});
+  return;
+}
+if(b.kind==='meteor'){
 // ★ v16 r12 #8: Метеорит — крупный неровный снаряд с тлеющим следом
 const t=b.life||0;
 // Тёмный кратерный фон
