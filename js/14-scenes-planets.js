@@ -707,6 +707,16 @@ function initPlanetBubblika(G){
     sporeShieldT:0,
     sporeMaxShield:0,
     windDX:0.5, windT:0, windNext:120+((Math.random()*120)|0), windTargetDX:0.5,
+    // ★ Phase 4.1: плавающие пузыри в атмосфере
+    bubbles:Array.from({length:14},()=>({
+      x:Math.random()*LW,
+      y:30+Math.random()*(LH-40),
+      r:4+Math.random()*11,         // диаметр 8..30
+      vy:-0.2-Math.random()*0.2,    // всплывают (vy -0.2..-0.4)
+      wobblePh:Math.random()*Math.PI*2,
+      wobbleAmp:0.5+Math.random()*1.2,
+      t:0,
+    })),
     // === ГЕЙЗЕРЫ: размещены под уязвимыми платформами ===
     geysers:[
       {x:103,y:LH-1,maxH:170,t:0,active:false,nextT:60+((Math.random()*40)|0),warmup:0,intensity:0,wobble:Math.random()*Math.PI*2},
@@ -776,6 +786,22 @@ function updPlanetBubblika(G){
   G.notifT=Math.max(0,G.notifT-1);const B=G.bub;
   if(G.dlg){updDialog(G);G.sT++;flushIn();return;}
   G.sT++;
+  // ★ Phase 4.1: обновление пузырей — всплытие + sin-колебание по X, респавн у нижней границы
+  if(B.bubbles){
+    for(const b of B.bubbles){
+      b.t++;
+      b.y+=b.vy;
+      // sin-колебание относительно базовой X (накапливается малыми смещениями)
+      b.x+=Math.sin(b.t*0.05+b.wobblePh)*0.15*b.wobbleAmp;
+      if(b.y<-b.r){
+        // вышел сверху — респавн внизу
+        b.y=LH+b.r;
+        b.x=Math.random()*LW;
+        b.r=4+Math.random()*11;
+        b.vy=-0.2-Math.random()*0.2;
+      }
+    }
+  }
 
   // Ветер плавно меняется. Несильный обычно, периодически порывы.
   B.windT++;
@@ -1169,12 +1195,58 @@ function updPlanetBubblika(G){
   updPts();updFTX();updSHK();
 }
 
+// ★ Phase 4.1: атмосфера Бубблики — вертикальный газовый градиент + облачные слои + пузыри + шиммер.
+//   Заменяет старые горизонтальные полосы на цельную газовую глубину.
+function _hexLerp(a,b,t){
+  const ar=parseInt(a.slice(1,3),16),ag=parseInt(a.slice(3,5),16),ab=parseInt(a.slice(5,7),16);
+  const br=parseInt(b.slice(1,3),16),bg=parseInt(b.slice(3,5),16),bb=parseInt(b.slice(5,7),16);
+  const r=Math.round(ar+(br-ar)*t),g=Math.round(ag+(bg-ag)*t),bl=Math.round(ab+(bb-ab)*t);
+  return '#'+r.toString(16).padStart(2,'0')+g.toString(16).padStart(2,'0')+bl.toString(16).padStart(2,'0');
+}
+function drwBubblikaAtmosphere(G,t){
+  const B=G.bub;
+  // Вертикальный градиент: верх P.BUB_GAS1 → середина P.BUB_GAS2 → низ P.BUB_GAS3.
+  // Шиммер: лёгкое горизонтальное смещение каждые 4 кадра — ощущение «плывущего воздуха».
+  const shimmer=(Math.floor(t/4)%2)?1:0;
+  for(let y=0;y<LH;y++){
+    const f=y/(LH-1);
+    let col;
+    if(f<0.5)col=_hexLerp(P.BUB_GAS1,P.BUB_GAS2,f*2);
+    else     col=_hexLerp(P.BUB_GAS2,P.BUB_GAS3,(f-0.5)*2);
+    rc(shimmer,y,LW,1,col);
+  }
+  // Облачные слои (parallax) — используем существующий B.clouds, разные скорости
+  for(const c of B.clouds){
+    cx.globalAlpha=.30;
+    // более вытянутые эллипсы для облаков (sz x 1.6 по горизонтали через две полосы)
+    disc(c.x|0,c.y|0,c.sz|0,c.col);
+    cx.fillStyle=c.col;cx.globalAlpha=.18;
+    cx.fillRect((c.x-c.sz*1.4)|0,(c.y-c.sz*0.3)|0,(c.sz*2.8)|0,(c.sz*0.6)|0);
+    cx.globalAlpha=1;
+  }
+  // Пузыри — полупрозрачные с белой бликовой точкой
+  if(B.bubbles){
+    for(const b of B.bubbles){
+      const bx=b.x|0, by=b.y|0;
+      cx.globalAlpha=.18;disc(bx,by,b.r|0,P.BUB3);cx.globalAlpha=1;
+      cx.globalAlpha=.42;ring(bx,by,b.r|0,P.BUB3,1);cx.globalAlpha=1;
+      // Блик
+      cx.globalAlpha=.65;
+      cx.fillStyle='#ffffff';
+      cx.fillRect((bx-b.r*0.4)|0,(by-b.r*0.4)|0,1,1);
+      cx.globalAlpha=1;
+    }
+  }
+}
+
 function drwPlanetBubblika(G){
   const t=G.sT,B=G.bub;
-  for(let y=0;y<LH;y++){const bandI=((y/6|0)+Math.floor(t*.02))%4;const bands=[P.BUB_GAS1,P.BUB_GAS2,P.BUB_GAS3,P.BUB2];rc(0,y,LW,1,bands[bandI]);}
-  for(let i=0;i<8;i++){const sy=((i*27+t*.3)%LH)|0;cx.globalAlpha=.15;rc(0,sy,LW,1,P.BUB3);}cx.globalAlpha=1;
-  // Облака движутся в направлении ветра
-  for(const c of B.clouds){cx.globalAlpha=.25;disc(c.x|0,c.y|0,c.sz|0,c.col);cx.globalAlpha=1;c.x+=B.windDX*0.3;}
+  // ★ Phase 4.1: газовая атмосфера (градиент + облака + пузыри) — заменяет старые полосы
+  drwBubblikaAtmosphere(G,t);
+  // Тонкие световые лучи поверх (декоративный шум)
+  for(let i=0;i<6;i++){const sy=((i*31+t*.4)%LH)|0;cx.globalAlpha=.10;rc(0,sy,LW,1,P.BUB3);}cx.globalAlpha=1;
+  // Старая отрисовка облаков (теперь делается внутри drwBubblikaAtmosphere) — оставляем дрейф позиций
+  for(const c of B.clouds){c.x+=B.windDX*0.3;}
   // Гейзеры — мощные многослойные столбы с волновой анимацией
   for(const g of B.geysers){
     // === НАТУРАЛЬНОЕ ОСНОВАНИЕ — каменистая ниша с водяным "котлом" ===
