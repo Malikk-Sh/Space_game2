@@ -111,7 +111,8 @@ function initSpace(G){saveCheckpoint(G,'space');TAP_FIRE=true;ALLOW_JOY=true;Obj
 if(G.pl.wepIdx==null)G.pl.wepIdx=(G.pl.wep===2?3:0);
 // Сброс на L1, если выбран недоступный слот (после загрузки старого сейва)
 if(!_wepUnlocked(G,G.pl.wepIdx)){G.pl.wepIdx=0;G.pl.wep=1;}
-if(G.pl.wep===2&&!G.campaignState.inventory.laserStrong)G.pl.wep=1;G.apprSX=G.pl.x;G.apprSY=G.pl.y;PTS.length=0;SHK.length=0;FTX.length=0;initStars();resetBtns();if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);}
+if(G.pl.wep===2&&!G.campaignState.inventory.laserStrong)G.pl.wep=1;G.apprSX=G.pl.x;G.apprSY=G.pl.y;PTS.length=0;SHK.length=0;FTX.length=0;initStars();resetBtns();if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}
+// ★ Phase 2.4: вход в корабль во время полёта — updSpace не вызывается пока state='ship_view', все процессы (топливо/прогресс/враги) застывают
   // === ТУТОРИАЛ КОСМОСА (только при первом полёте) ===
   if(!G.campaignState.flags.tutSpaceShown){
     G.campaignState.flags.tutSpaceShown=true;
@@ -211,16 +212,46 @@ function updSpace(G){
   handlePauseInput(G);if(G.paused)return;
   // Туториал блокирует игровой ввод
   if(G.tutorial){updTutorial(G);return;}
+  // ★ Phase 2.4: вход в корабль во время полёта (Tab или экранная кнопка S)
+  //   updSpace перестаёт вызываться сразу же — все процессы (топливо, прогресс,
+  //   враги) застывают, состояние сохраняется в G.* до возврата.
+  if(KD.Tab||btnJust('ship')){
+    startTrans(()=>{
+      G.shipReturnState='space';
+      G.state='ship_view';
+      G.shipT=0;
+      TAP_FIRE=false;
+      resetBtns();
+      addBtn('back',20,24,10,'<',P.UIT);
+      ALLOW_JOY=false;TOUCH.joyId=-1;TOUCH.joyActive=false;
+    });
+    sfxUI2();
+    return;
+  }
   const p=G.pl;
   G.sT++;
   const sh=G.ship;
   // Топливо теперь отвечает за маршевый ход и ускорение. При нуле остаётся аварийная тяга.
-  sh.fuel=Math.max(0,sh.fuel-0.009);
+  // ★ Phase 2.4: эффекты распределения рабочих
+  ensureShipWorkers(G);
+  const _sw=G.ship.workers;
+  // Fuel-room снижает расход топлива (1 рабочий = -5% расхода)
+  const _fuelEff=1/(1+_sw.fuel*0.05);
+  sh.fuel=Math.max(0,sh.fuel-0.009*_fuelEff);
   if(sh.fuel<1&&G.sT%120===0){G.notif='ТОПЛИВО КОНЧИЛОСЬ: АВАРИЙНЫЙ ХОД X0.3';G.notifT=90;G.notifCol=P.RED;sfxHit();}
   else if(sh.fuel<15&&G.sT%180===0){G.notif='КРИТИЧНЫЙ ТОПЛИВО! ЗАГРУЗИ РЕСУРСЫ НА КОРАБЛЬ';G.notifT=110;G.notifCol=P.RED;}
   else if(sh.fuel<30&&G.sT%200===0){G.notif='ТОПЛИВО КОНЧАЕТСЯ... ОСТАЛОСЬ: '+Math.floor(sh.fuel)+'%';G.notifT=80;G.notifCol=P.ORA;}
-  // Энергия теперь регенерируется только от количества рабочих
-  p.en=Math.min(p.men,p.en+.18*p.workers);
+  // Power-room регенерирует энергию (1 рабочий = +0.18 EN/кадр)
+  p.en=Math.min(p.men,p.en+.18*_sw.power);
+  // Workshop-room продвигает крафт-очередь (1 рабочий = +1 ед/кадр)
+  if(_sw.workshop>0&&G.ship.craftQueue&&G.ship.craftQueue.length>0){
+    const item=G.ship.craftQueue[0];
+    item.progress=(item.progress||0)+_sw.workshop;
+    if(item.progress>=item.total){
+      _completeCraft(G,item);
+      G.ship.craftQueue.shift();
+    }
+  }
   if(p.en<15&&G.sT%180===0){G.notif='ЭНЕРГИЯ НИЗКАЯ! ЭКОНОМЬ ВЫСТРЕЛЫ';G.notifT=70;G.notifCol=P.ENL;}
   if(p.shield>0)p.shield--;
   if(p.boost>0)p.boost--;
@@ -376,7 +407,8 @@ function updSpace(G){
         addShockwave(a.x,a.y,12,P.CYA);
         G.asts.splice(i,1);
       }else{
-        p.hp-=a.s*2+4;p.inv=55;p.squash=6;
+        // ★ Phase 2.4: Bridge-рабочие снижают входящий урон (5% за каждого)
+        p.hp-=(a.s*2+4)*(1-_sw.bridge*0.05);p.inv=55;p.squash=6;
         shake(5);flash(.35,P.HP);sfxHit();G.combo=0;
         spPts(p.x,p.y,14,[P.HP,'#ff8888',P.WHT],1,3.5,20);
         addShockwave(p.x,p.y,14,P.HP);
@@ -604,7 +636,7 @@ function updSpace(G){
         p.shield=0;p.inv=25;
         addShockwave(e.x,e.y,12,P.CYA);
       } else {
-        p.hp-=ramDmg;p.inv=55;p.squash=6;
+        p.hp-=ramDmg*(1-_sw.bridge*0.05);p.inv=55;p.squash=6;
         shake(5);flash(.4,P.HP);sfxHit();G.combo=0;hitStopAdd(4);
       }
       spPts(e.x,e.y,12,[P.PIR3,P.ORA,P.WHT],.5,3,20);
@@ -632,7 +664,7 @@ function updSpace(G){
       if(p.shield>0){
         sfxShield();flash(.2,P.CYA);p.shield=0;p.inv=20;
       } else {
-        const dmg=b.dmg||8;
+        const dmg=(b.dmg||8)*(1-_sw.bridge*0.05);
         p.hp-=dmg;p.inv=40;p.squash=5;
         shake(b.kind==='pierce'?5:3);flash(.3,P.HP);sfxHit();G.combo=0;
         if(b.kind==='pierce'||b.kind==='bigshell')hitStopAdd(3);

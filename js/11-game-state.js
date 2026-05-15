@@ -12,7 +12,46 @@ function newGame(){return{state:'menu',menuT:0,menuSt:[],pl:{x:50,y:LH/2,vx:0,vy
   campaignState:{currentPlanet:'drosh',targetPlanet:'drosh',planetsVisited:[],planetsCompleted:[],inventory:{krokRecords:false,bubblikaContract:false,laserBlueprint:false,laserStrong:false,shieldBlueprint:false,shieldBuilt:false,starBattery:false,spreadUnlocked:false,missileUnlocked:false,beamUnlocked:false,burstUnlocked:false},materials:0,inventory_extra:{},flags:{pfftGifted:false,droshSideDone:false,bubSideDone:false,
     // Флаги показа туториалов (один раз)
     tutSpaceShown:false,tutDroshShown:false,tutShipShown:false,
-  }},ship:{fuel:70,decor:0}};}
+  }},ship:{fuel:70,decor:0,workers:{power:2,fuel:0,bridge:0,workshop:0},craftQueue:[]}};}
+
+// ★ Phase 2.4: гарантирует наличие новых полей в G.ship для старых сейвов.
+//   Старая модель имела только G.pl.workers (всего рабочих). Новая хранит
+//   распределение по комнатам в G.ship.workers. По умолчанию все в Power.
+function ensureShipWorkers(G){
+  if(!G.ship)return;
+  if(!G.ship.workers){
+    G.ship.workers={power:G.pl?G.pl.workers||2:2,fuel:0,bridge:0,workshop:0};
+  }
+  if(!G.ship.craftQueue){G.ship.craftQueue=[];}
+  // Sanity: общая сумма должна равняться G.pl.workers; если нет — корректируем power.
+  const sum=G.ship.workers.power+G.ship.workers.fuel+G.ship.workers.bridge+G.ship.workers.workshop;
+  const total=G.pl?G.pl.workers||sum:sum;
+  if(sum!==total){
+    const delta=total-sum;
+    G.ship.workers.power=Math.max(0,G.ship.workers.power+delta);
+  }
+}
+
+// ★ Phase 2.4: перемещение 1 рабочего между комнатами (used by ship UI).
+//   delta=+1 — взять у самой «густой» (>0) другой комнаты и положить сюда.
+//   delta=-1 — отдать в Power (или Fuel если room уже Power).
+function reallocWorkers(G,room,delta){
+  ensureShipWorkers(G);
+  const w=G.ship.workers;
+  if(delta>0){
+    let donor=null,maxC=0;
+    for(const r of ['power','fuel','bridge','workshop']){
+      if(r===room)continue;
+      if(w[r]>maxC){maxC=w[r];donor=r;}
+    }
+    if(donor){w[donor]--;w[room]++;return true;}
+    return false;
+  }
+  if(w[room]<=0)return false;
+  const recipient=room==='power'?'fuel':'power';
+  w[room]--;w[recipient]++;
+  return true;
+}
 
 let G=newGame();window.G=G;
 function startTrans(nextFn){G.transOut=30;G.transNext=nextFn;}
