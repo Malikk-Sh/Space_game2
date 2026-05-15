@@ -5,7 +5,113 @@
 // (originally sintara_v25.html lines 2253-2938)
 // ============================================================
 
-function initSpace(G){saveCheckpoint(G,'space');TAP_FIRE=true;ALLOW_JOY=true;Object.assign(G,{state:'space',asts:[],buls:[],rits:[],enms:[],ebuls:[],pups:[],sT:0,prog:0,appr:false,landT:0,astST:40,enmST:240,combo:0,comboT:0,transIn:60,landingTriggered:false,_minibossSpawned:false,_sniperAlive:false});Object.assign(G.pl,{x:50,y:LH/2,vx:0,vy:0,inv:0,boost:0,squash:0,drift:0,boostWas:false,wep:Math.min(2,G.pl.wep||1)});if(G.pl.wep===2&&!G.campaignState.inventory.laserStrong)G.pl.wep=1;G.apprSX=G.pl.x;G.apprSY=G.pl.y;PTS.length=0;SHK.length=0;FTX.length=0;initStars();resetBtns();if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('w1',LW-52,LH-22,11,'1',P.L1);addBtn('w2',LW-28,LH-22,11,'2',P.L3);}
+// ============================================================
+// ★ Реестр оружия (Phase 2.2)
+//   Источник истины: G.pl.wepIdx (0..5). Поле G.pl.wep остаётся как
+//   legacy-маркер (1=L1-семейство, 2=L2-семейство) для финала, который
+//   ещё использует только два уровня.
+// ============================================================
+const WEAPONS=[
+  {id:'l1',     idx:0, name:'ЛАЗЕР L1', short:'L1', dmg:2,   en:10, cd:7,  kind:'simple',  col:P.L1,  lv:1, vx:7, range:52, legacyWep:1},
+  {id:'spread', idx:1, name:'СПРЕД',     short:'SPR',dmg:1,   en:18, cd:14, kind:'spread',  col:P.L1L, lv:1, vx:6, range:40, legacyWep:1},
+  {id:'missile',idx:2, name:'РАКЕТА',    short:'MSL',dmg:5,   en:25, cd:30, kind:'missile', col:P.ORA, lv:1, vx:3, range:90, legacyWep:1},
+  {id:'l2',     idx:3, name:'ЛАЗЕР L2', short:'L2', dmg:10,  en:44, cd:28, kind:'simple',  col:P.L3,  lv:3, vx:5, range:40, legacyWep:2},
+  {id:'beam',   idx:4, name:'ЛУЧ',       short:'BMM',dmg:0.5, en:1,  cd:0,  kind:'beam',    col:P.L2,  lv:1, vx:14,range:24, legacyWep:2},
+  {id:'burst',  idx:5, name:'БЁРСТ',     short:'BST',dmg:3,   en:50, cd:36, kind:'burst',   col:P.YEL, lv:2, vx:7, range:50, legacyWep:2},
+];
+
+// Разблокировано ли оружие по индексу WEAPONS
+function _wepUnlocked(G,idx){
+  const inv=G.campaignState.inventory;
+  switch(idx){
+    case 0: return true; // L1 — стартовое
+    case 1: return !!inv.spreadUnlocked;
+    case 2: return !!inv.missileUnlocked;
+    case 3: return !!inv.laserStrong;
+    case 4: return !!inv.beamUnlocked;
+    case 5: return !!inv.burstUnlocked;
+  }
+  return false;
+}
+
+// Переключиться на оружие по индексу. Если заблокировано — уведомление.
+// Поддерживает оба пути входа: цифровая клавиша и циклическая кнопка.
+function _switchWeapon(G,idx){
+  if(!_wepUnlocked(G,idx)){
+    G.notif='ЗАБЛОКИРОВАНО — КУПИ В МАСТЕРСКОЙ';
+    G.notifT=80;G.notifCol=P.YEL;sfxHit();
+    return false;
+  }
+  const w=WEAPONS[idx];
+  G.pl.wepIdx=idx;
+  G.pl.wep=w.legacyWep; // синхронизируем legacy-поле для финала/иных мест
+  G.pl.burstQueue=0;    // сбрасываем активный бёрст при смене
+  sfxUI();
+  fText(G.pl.x,G.pl.y-12,w.short,w.col);
+  return true;
+}
+
+// Цикл к следующему разблокированному оружию (touch UI).
+function _cycleWeapon(G){
+  const start=G.pl.wepIdx||0;
+  for(let step=1;step<=WEAPONS.length;step++){
+    const next=(start+step)%WEAPONS.length;
+    if(_wepUnlocked(G,next)){_switchWeapon(G,next);return;}
+  }
+}
+
+// Выстрел из конкретного оружия (используется и в space, и в финале).
+//   rangeBoost — множитель дальности (в финале нужно больше: lf=160 вместо 52)
+function _fireFromWeapon(G,p,w,rangeBoost){
+  const dmgM=_DEV.dmgMult;
+  const lf=Math.max(10,(w.range*(rangeBoost||1))|0);
+  switch(w.kind){
+    case 'simple':
+      G.buls.push({x:p.x+12,y:p.y,vx:w.vx,lv:w.lv,lf,dmg:w.dmg*dmgM});
+      sfxL(w.lv>=2?2:1);
+      if(w.lv>=3){shake(2.5);flash(.2,w.col);}
+      spPts(p.x+12,p.y,3,[w.col,P.WHT],.3,1.5,6,0);
+      break;
+    case 'spread':
+      // Веер из 3 пуль: -15°, 0°, +15° (≈ ±0.26 рад)
+      for(const ang of [-0.26, 0, 0.26]){
+        G.buls.push({x:p.x+12,y:p.y,vx:Math.cos(ang)*w.vx,vy:Math.sin(ang)*w.vx,lv:1,lf,dmg:w.dmg*dmgM,spread:true});
+      }
+      sfxL(1);
+      spPts(p.x+12,p.y,6,[w.col,P.WHT],.5,2,8,0);
+      break;
+    case 'missile':
+      // Самонаведение на ближайшего врага
+      let target=null,bd=Infinity;
+      for(const e of G.enms){
+        const d=Math.hypot(e.x-p.x,e.y-p.y);
+        if(d<bd){bd=d;target=e;}
+      }
+      G.buls.push({x:p.x+12,y:p.y,vx:w.vx,vy:0,lv:1,lf,dmg:w.dmg*dmgM,missile:true,target,t:0});
+      sfxShoot();
+      spPts(p.x+12,p.y,4,[P.ORA,P.RED,P.WHT],.3,1.5,8,0);
+      break;
+    case 'beam':
+      // Луч — мини-пуля каждый кадр (вызывается из самого боевого цикла, не отсюда)
+      G.buls.push({x:p.x+12,y:p.y,vx:w.vx,lv:1,lf,dmg:w.dmg*dmgM,beam:true});
+      if(G.sT%6===0)bip(1500,.03,.05,'sawtooth');
+      break;
+  }
+}
+
+// Запуск Burst-режима — 5 пуль за 30 кадров, оплачивается единоразово.
+function _startBurst(G,p,w){
+  p.burstQueue=5;
+  p.burstNext=0;
+  shake(2);
+}
+
+function initSpace(G){saveCheckpoint(G,'space');TAP_FIRE=true;ALLOW_JOY=true;Object.assign(G,{state:'space',asts:[],buls:[],rits:[],enms:[],ebuls:[],pups:[],sT:0,prog:0,appr:false,landT:0,astST:40,enmST:240,combo:0,comboT:0,transIn:60,landingTriggered:false,_minibossSpawned:false,_sniperAlive:false});Object.assign(G.pl,{x:50,y:LH/2,vx:0,vy:0,inv:0,boost:0,squash:0,drift:0,boostWas:false,wep:Math.min(2,G.pl.wep||1),burstQueue:0,burstNext:0});
+// ★ Миграция: если wepIdx ещё не задан, выводим из legacy p.wep (1→0 L1, 2→3 L2)
+if(G.pl.wepIdx==null)G.pl.wepIdx=(G.pl.wep===2?3:0);
+// Сброс на L1, если выбран недоступный слот (после загрузки старого сейва)
+if(!_wepUnlocked(G,G.pl.wepIdx)){G.pl.wepIdx=0;G.pl.wep=1;}
+if(G.pl.wep===2&&!G.campaignState.inventory.laserStrong)G.pl.wep=1;G.apprSX=G.pl.x;G.apprSY=G.pl.y;PTS.length=0;SHK.length=0;FTX.length=0;initStars();resetBtns();if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);}
   // === ТУТОРИАЛ КОСМОСА (только при первом полёте) ===
   if(!G.campaignState.flags.tutSpaceShown){
     G.campaignState.flags.tutSpaceShown=true;
@@ -191,33 +297,55 @@ function updSpace(G){
   }
   drwShipSmoke(p.x,p.y,p.hp/p.mhp);
 
-  // Переключение оружия
-  if(KD.Digit1||KD.Numpad1||btnJust('w1')){
-    p.wep=1;sfxUI();fText(p.x,p.y-12,'L1',P.L1);
+  // ★ Переключение оружия — цифры 1..6 или кнопка цикла на тач
+  for(let d=0;d<6;d++){
+    if(KD['Digit'+(d+1)]||KD['Numpad'+(d+1)]){_switchWeapon(G,d);break;}
   }
-  if(KD.Digit2||KD.Numpad2||btnJust('w2')){
-    if(G.campaignState.inventory.laserStrong){
-      p.wep=2;sfxUI();fText(p.x,p.y-12,'L2',P.L3);
-    }else{
-      G.notif='СДЕЛАЙ ЛАЗЕР НА ВЕРСТАКЕ';
-      G.notifT=80;G.notifCol=P.YEL;sfxHit();
+  if(btnJust('wcyc'))_cycleWeapon(G);
+
+  // ★ Стрельба — диспетчер по типу оружия (simple/spread/missile/beam/burst)
+  p.sCD=Math.max(0,p.sCD-1);
+  // Burst-очередь работает независимо от текущего нажатия кнопки
+  if(p.burstQueue>0){
+    if(p.burstNext<=0){
+      // Лёгкий джиттер по Y для визуальной «очерёдности»
+      G.buls.push({x:p.x+12,y:p.y+(Math.random()-.5)*4,vx:7,lv:2,lf:50,dmg:3*_DEV.dmgMult,burst:true});
+      spPts(p.x+12,p.y,2,[P.YEL,P.WHT],.3,1,5,0);
+      sfxL(1);
+      p.burstQueue--;
+      p.burstNext=6;
+    } else {
+      p.burstNext--;
     }
   }
-
-  // Стрельба
-  p.sCD=Math.max(0,p.sCD-1);
+  const w=WEAPONS[p.wepIdx||0]||WEAPONS[0];
   const firing=K.Space||K.KeyZ||(USE_TOUCH_UI&&TOUCH.fire);
-  if(firing&&p.sCD===0){
-    // ★ v16: Базовый лазер - урон x2 (1→2), расход энергии x1.3 (8→10), дальность x1.6 (32→52, 24→40)
-    const ec=[10,44][p.wep-1],cd=[7,28][p.wep-1];
-    if(p.en>=ec){
-      p.en-=ec;p.sCD=cd;
-      G.buls.push({x:p.x+12,y:p.y,vx:[7,5][p.wep-1],lv:p.wep===2?3:1,lf:[52,40][p.wep-1],dmg:[2,10][p.wep-1]*_DEV.dmgMult});
-      sfxL(p.wep);
-      if(p.wep===2){shake(2.5);flash(.2,P.L3L);}
-      spPts(p.x+12,p.y,3,p.wep===1?[P.L1L,P.WHT]:[P.L3L,P.WHT,P.YEL],.3,1.5,6,0);
-    }else if(G.sT%15===0){
-      fText(p.x,p.y-12,'NET EN',P.ENL);
+  if(firing){
+    if(w.kind==='beam'){
+      // Луч: 1 EN/кадр, мини-пуля каждый кадр (без cooldown)
+      if(p.en>=w.en){
+        p.en-=w.en;
+        _fireFromWeapon(G,p,w);
+      } else if(G.sT%15===0){
+        fText(p.x,p.y-12,'NET EN',P.ENL);
+      }
+    } else if(w.kind==='burst'){
+      if(p.sCD===0 && p.burstQueue===0){
+        if(p.en>=w.en){
+          p.en-=w.en;p.sCD=w.cd;
+          _startBurst(G,p,w);
+        } else if(G.sT%15===0){
+          fText(p.x,p.y-12,'NET EN',P.ENL);
+        }
+      }
+    } else if(p.sCD===0){
+      // simple / spread / missile — оплачивается каждый выстрел
+      if(p.en>=w.en){
+        p.en-=w.en;p.sCD=w.cd;
+        _fireFromWeapon(G,p,w);
+      } else if(G.sT%15===0){
+        fText(p.x,p.y-12,'NET EN',P.ENL);
+      }
     }
   }
 
@@ -260,8 +388,32 @@ function updSpace(G){
   if(p.squash>0)p.squash--;
   for(let i=G.buls.length-1;i>=0;i--){
     const b=G.buls[i];
-    b.x+=b.vx;b.lf--;
-    if(b.lf<=0||b.x>LW+20){G.buls.splice(i,1);continue;}
+    // ★ Ракета — самонаведение на цель
+    if(b.missile){
+      b.t=(b.t||0)+1;
+      // Перевыбор цели если предыдущая мертва/удалена
+      if(!b.target||b.target.hp<=0||G.enms.indexOf(b.target)<0){
+        let best=null,bd=Infinity;
+        for(const e of G.enms){
+          const dd=Math.hypot(e.x-b.x,e.y-b.y);
+          if(dd<bd){bd=dd;best=e;}
+        }
+        b.target=best;
+      }
+      if(b.target){
+        const dx=b.target.x-b.x,dy=b.target.y-b.y,d=Math.hypot(dx,dy)||1;
+        const tx=dx/d,ty=dy/d;
+        // Плавный поворот к цели + нормировка к константной скорости
+        b.vx=b.vx*.88+tx*4*.12;
+        b.vy=(b.vy||0)*.88+ty*4*.12;
+        const m=Math.hypot(b.vx,b.vy)||1;
+        b.vx=b.vx/m*4;b.vy=b.vy/m*4;
+      }
+      // Хвост дыма
+      if(b.t%3===0)PTS.push({x:b.x,y:b.y,vx:-1,vy:0,lf:10,ml:14,col:P.ORA,sz:1,gv:0,fade:.65});
+    }
+    b.x+=b.vx;b.y+=(b.vy||0);b.lf--;
+    if(b.lf<=0||b.x>LW+20||b.x<-10||b.y<-10||b.y>LH+10){G.buls.splice(i,1);continue;}
     let hit=false;
     // Попадание по астероидам
     for(let j=G.asts.length-1;j>=0;j--){

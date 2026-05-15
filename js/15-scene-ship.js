@@ -278,19 +278,31 @@ function drwShipView(G){
   const gap=2;
 
   // Описания всех 4 комнат
-  const canBuildLaser=inv.laserBlueprint&&!inv.laserStrong;
-  const canBuildShield=inv.bubblikaContract&&!inv.shieldBuilt;
+  // ★ Phase 2.2: верстак теперь даёт 4 новых оружия в дополнение к Л2 и Щиту.
+  //   Stop-gap acquisition: пока нет квестов на Бубблике/Краснозёме — все оружия покупаются здесь.
+  const cr=G.pl.cr, mat=G.campaignState.materials||0;
+  const _workshopItems=[
+    {unbuilt:inv.laserBlueprint&&!inv.laserStrong, label:'Л2',     short:'Л2',     cost:90,  matCost:0, id:'l2'},
+    {unbuilt:inv.bubblikaContract&&!inv.shieldBuilt, label:'ЩИТ',  short:'ЩИТ',    cost:60,  matCost:0, id:'shield'},
+    {unbuilt:!inv.spreadUnlocked,  label:'СПРЕД',  short:'СПРЕД',  cost:50,  matCost:1, id:'spread'},
+    {unbuilt:!inv.missileUnlocked, label:'РАКЕТА', short:'РАКЕТА', cost:80,  matCost:2, id:'missile'},
+    {unbuilt:!inv.beamUnlocked,    label:'ЛУЧ',    short:'ЛУЧ',    cost:120, matCost:2, id:'beam'},
+    {unbuilt:!inv.burstUnlocked,   label:'БЁРСТ',  short:'БЁРСТ',  cost:150, matCost:3, id:'burst'},
+  ];
+  const _workshopNext=_workshopItems.find(i=>i.unbuilt);
   let workshopHint='';
   let workshopStatus='info';
-  if(canBuildLaser){
-    workshopHint='Л2: 90 КР';workshopStatus=G.pl.cr>=90?'ready':'need';
-  }else if(canBuildShield){
-    workshopHint='ЩИТ: 60 КР';workshopStatus=G.pl.cr>=60?'ready':'need';
-  }else if(inv.laserStrong&&inv.shieldBuilt){
+  if(_workshopNext){
+    const i=_workshopNext;
+    workshopHint=i.short+': '+i.cost+'КР'+(i.matCost>0?' '+i.matCost+'М':'');
+    const ok=(cr>=i.cost)&&(mat>=i.matCost);
+    const needsBp=(i.id==='l2'&&!inv.laserBlueprint)||(i.id==='shield'&&!inv.bubblikaContract);
+    workshopStatus=needsBp?'locked':(ok?'ready':'need');
+  } else {
     workshopHint='ВСЁ ГОТОВО!';workshopStatus='done';
-  }else{
-    workshopHint='НЕТ ЧЕРТЕЖЕЙ';workshopStatus='locked';
   }
+  // Показываем материалы в общем интерфейсе корабля
+  if(mat>0){workshopHint+=' | МАТ: '+mat;}
 
   const fuelStatus=G.pl.res>=FEED_COST?'ready':'need';
 
@@ -313,36 +325,69 @@ function drwShipView(G){
     {col:0,row:1,id:'workshop',name:'ВЕРСТАК',col2:P.GRN,
      hint:workshopHint, status:workshopStatus,
      action:(G)=>{
-       if(inv.laserBlueprint&&!inv.laserStrong){
-         if(G.pl.cr>=90){
-           G.pl.cr-=90;inv.laserStrong=true;
-           showQuestReward(G,'УЛУЧШЕНИЕ СОЗДАНО',[
-             {label:'ЛАЗЕР LVL 2 АКТИВЕН',col:P.L3},
-             {label:'-90 КРЕДИТОВ',col:P.YEL},
-           ],P.GRN);
-           sfxPU();setTimeout(sfxUI2,80);setTimeout(sfxPU,160);flash(.4,P.GRN);
-           spPts(LW/2,LH/2,30,[P.GRN,P.L3,P.WHT,P.YEL],.7,4,30,.02,2);
-           addShockwave(LW/2,LH/2,40,P.GRN,20);shake(3);
-         }else{G.notif='ЛАЗЕР: НУЖНО 90 КР (ЕСТЬ '+G.pl.cr+')';G.notifT=90;G.notifCol=P.RED;sfxHit();}
-         return;
+       const inv2=G.campaignState.inventory;
+       const items=[
+         {unbuilt:inv2.laserBlueprint&&!inv2.laserStrong, label:'ЛАЗЕР', short:'Л2', cost:90, matCost:0, id:'l2'},
+         {unbuilt:inv2.bubblikaContract&&!inv2.shieldBuilt, label:'ЩИТ', short:'ЩИТ', cost:60, matCost:0, id:'shield'},
+         {unbuilt:!inv2.spreadUnlocked,  label:'СПРЕД',  short:'СПРЕД',  cost:50,  matCost:1, id:'spread'},
+         {unbuilt:!inv2.missileUnlocked, label:'РАКЕТА', short:'РАКЕТА', cost:80,  matCost:2, id:'missile'},
+         {unbuilt:!inv2.beamUnlocked,    label:'ЛУЧ',    short:'ЛУЧ',    cost:120, matCost:2, id:'beam'},
+         {unbuilt:!inv2.burstUnlocked,   label:'БЁРСТ',  short:'БЁРСТ',  cost:150, matCost:3, id:'burst'},
+       ];
+       const next=items.find(i=>i.unbuilt);
+       if(!next){
+         G.notif='ВСЁ СОБРАНО! ЛЕТИ К ТИНЕ!';G.notifT=100;G.notifCol=P.GRN;sfxUI();return;
        }
-       if(inv.bubblikaContract&&!inv.shieldBuilt){
-         if(G.pl.cr>=60){
-           G.pl.cr-=60;inv.shieldBuilt=true;
+       // Чертежи квестовых предметов требуют сами чертежи
+       if(next.id==='l2'&&!inv2.laserBlueprint){G.notif='НУЖЕН ЧЕРТЁЖ Л2 (ДРОШ)';G.notifT=90;G.notifCol=P.YEL;sfxHit();return;}
+       if(next.id==='shield'&&!inv2.bubblikaContract){G.notif='НУЖЕН ЧЕРТЁЖ ЩИТА (БУББЛИКА)';G.notifT=90;G.notifCol=P.YEL;sfxHit();return;}
+       const haveCR=G.pl.cr, haveMat=G.campaignState.materials||0;
+       if(haveCR<next.cost){G.notif=next.short+': НУЖНО '+next.cost+' КР (ЕСТЬ '+haveCR+')';G.notifT=90;G.notifCol=P.RED;sfxHit();return;}
+       if(haveMat<next.matCost){G.notif=next.short+': НУЖНО '+next.matCost+' МАТЕР. (ЕСТЬ '+haveMat+')';G.notifT=90;G.notifCol=P.RED;sfxHit();return;}
+       // Списываем и применяем эффект
+       G.pl.cr-=next.cost;
+       G.campaignState.materials=haveMat-next.matCost;
+       const rewards=[{label:'-'+next.cost+' КРЕДИТОВ',col:P.YEL}];
+       if(next.matCost>0)rewards.push({label:'-'+next.matCost+' МАТЕРИАЛОВ',col:P.CYA});
+       let glowCol=P.GRN;
+       switch(next.id){
+         case 'l2':
+           inv2.laserStrong=true;
+           rewards.unshift({label:'ЛАЗЕР L2 АКТИВЕН',col:P.L3});
+           glowCol=P.L3;
+           break;
+         case 'shield':
+           inv2.shieldBuilt=true;
            G.pl.mhp+=40;G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+40);
-           showQuestReward(G,'УЛУЧШЕНИЕ СОЗДАНО',[
-             {label:'ЭНЕРГОЩИТ АКТИВЕН',col:P.CYA},
-             {label:'+40 МАКС. ХП',col:P.HP},
-             {label:'-60 КРЕДИТОВ',col:P.YEL},
-           ],P.CYA);
-           sfxPU();setTimeout(sfxUI2,80);setTimeout(sfxPU,160);flash(.4,P.CYA);
-           spPts(LW/2,LH/2,30,[P.CYA,P.WHT,P.SH1,P.YEL],.7,4,30,.02,2);
-           addShockwave(LW/2,LH/2,40,P.CYA,20);shake(3);
-         }else{G.notif='ЩИТ: НУЖНО 60 КР (ЕСТЬ '+G.pl.cr+')';G.notifT=90;G.notifCol=P.RED;sfxHit();}
-         return;
+           rewards.unshift({label:'+40 МАКС. ХП',col:P.HP});
+           rewards.unshift({label:'ЭНЕРГОЩИТ АКТИВЕН',col:P.CYA});
+           glowCol=P.CYA;
+           break;
+         case 'spread':
+           inv2.spreadUnlocked=true;
+           rewards.unshift({label:'СПРЕД — ВЕЕР ИЗ 3 ПУЛЬ',col:P.L1L});
+           glowCol=P.L1;
+           break;
+         case 'missile':
+           inv2.missileUnlocked=true;
+           rewards.unshift({label:'РАКЕТА — САМОНАВЕДЕНИЕ',col:P.ORA});
+           glowCol=P.ORA;
+           break;
+         case 'beam':
+           inv2.beamUnlocked=true;
+           rewards.unshift({label:'ЛУЧ — НЕПРЕРЫВНЫЙ',col:P.L2});
+           glowCol=P.L2;
+           break;
+         case 'burst':
+           inv2.burstUnlocked=true;
+           rewards.unshift({label:'БЁРСТ — ОЧЕРЕДЬ 5 ПУЛЬ',col:P.YEL});
+           glowCol=P.YEL;
+           break;
        }
-       if(inv.laserStrong&&inv.shieldBuilt){G.notif='ВСЁ СОБРАНО! ЛЕТИ К ТИНЕ!';G.notifT=100;G.notifCol=P.GRN;sfxUI();}
-       else{G.notif='ЧЕРТЕЖИ ЕСТЬ НА ПЛАНЕТАХ!';G.notifT=100;G.notifCol=P.YEL;sfxHit();}
+       showQuestReward(G,'УЛУЧШЕНИЕ СОЗДАНО',rewards,glowCol);
+       sfxPU();setTimeout(sfxUI2,80);setTimeout(sfxPU,160);flash(.4,glowCol);
+       spPts(LW/2,LH/2,30,[glowCol,P.WHT,P.YEL],.7,4,30,.02,2);
+       addShockwave(LW/2,LH/2,40,glowCol,20);shake(3);
      },
      notif:'СБОРКА УЛУЧШЕНИЙ ПО ЧЕРТЕЖАМ.'},
     {col:1,row:1,id:'bridge',name:'МОСТИК',col2:P.UIT,
