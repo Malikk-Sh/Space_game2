@@ -207,6 +207,15 @@ function sfxVictory() {
   setTimeout(() => bip(1047, .4, .2,  'square'), 600);
 }
 
+// ★ Phase 5.3: Звук разблокировки достижения — короткая восходящая мажорная гамма.
+function sfxAchievement() {
+  if (!AC) return;
+  bip(523, .12, .10, 'sine');
+  setTimeout(() => bip(659, .12, .10, 'sine'),  70);
+  setTimeout(() => bip(784, .12, .10, 'sine'), 140);
+  setTimeout(() => bip(1047, .28, .14, 'sine'), 210);
+}
+
 // ★ Phase 4.4: Низкое урчание перед посадкой — вход в атмосферу.
 //   Шум через лоупасс + лёгкий низкий sawtooth-нарастающий тон.
 function sfxAtmosphereEnter() {

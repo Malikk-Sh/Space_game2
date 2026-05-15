@@ -1137,6 +1137,10 @@ function _completeCraft(G,item){
   flash(.4,glowCol);
   spPts(G.pl.x,G.pl.y,18,[glowCol,P.WHT,P.YEL],.6,3,22,.02,1.8);
   addShockwave(G.pl.x,G.pl.y,24,glowCol,16);shake(2);
+  // ★ Phase 5.3: достижение "Арсенал" — L1+L2+Spread+Missile+Beam одновременно
+  if(inv.laserStrong&&inv.spreadUnlocked&&inv.missileUnlocked&&inv.beamUnlocked){
+    unlockAchievement(G,'arsenal');
+  }
 }
 
 function restoreFinalePhase(G,targetPhase,targetHp){

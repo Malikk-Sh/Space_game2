@@ -476,6 +476,9 @@ function updSpace(G){
           if(a.drop)G.rits.push({x:a.x,y:a.y,vx:-.8,vy:(Math.random()-.5)*1.2,lf:250,t:0});
           if(a.s===9&&Math.random()<.25)spwnPowerUp(G,a.x,a.y);
           p.cr+=a.s;fText(a.x,a.y-8,'+'+a.s+'CR',P.YEL);
+          // ★ Phase 5.3: первый астероид + банкир (накопить 500 КР)
+          if(!G._aFirstAstKilled){G._aFirstAstKilled=true;unlockAchievement(G,'firstAst');}
+          if(p.cr>=500)unlockAchievement(G,'banker');
           G.asts.splice(j,1);
         }
         hit=true;break;
@@ -533,6 +536,10 @@ function updSpace(G){
             hitStopAdd(_t==='miniboss'?6:3);
             G.combo+=(_t==='miniboss'?5:2);G.comboT=120;
             p.cr+=crGain;fText(e.x,e.y-8,'+'+crGain+'CR',P.YEL);
+            // ★ Phase 5.3: пиратские убийства + комбо 20 + банкир
+            if(_t==='pirate'||_t==='miniboss')G._aTotalPirateKills=(G._aTotalPirateKills||0)+1;
+            if(G.combo>=20)unlockAchievement(G,'combo20');
+            if(p.cr>=500)unlockAchievement(G,'banker');
             // Дроп ресурсов (несколько, разбросаны)
             for(let r=0;r<resGain;r++){
               G.rits.push({x:e.x,y:e.y+(Math.random()-.5)*4,vx:-.5-Math.random()*.5,vy:(Math.random()-.5)*1.2,lf:250,t:0});
@@ -693,6 +700,9 @@ function updSpace(G){
     if(d<56){r.vx+=dx/d*.7;r.vy+=dy/d*.7;}
     if(d<10){
       p.res++;sfxPU();
+      // ★ Phase 5.3: суммарный собранный RES → достижение "Ресурсный король"
+      G._aTotalResCollected=(G._aTotalResCollected||0)+1;
+      if(G._aTotalResCollected>=50)unlockAchievement(G,'resKing');
       fText(r.x,r.y,'+RES',P.RES3);
       spPts(r.x,r.y,6,[P.RES,P.RES3,P.WHT],.5,2,14);
       G.rits.splice(i,1);continue;
