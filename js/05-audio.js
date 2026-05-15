@@ -207,6 +207,15 @@ function sfxVictory() {
   setTimeout(() => bip(1047, .4, .2,  'square'), 600);
 }
 
+// ★ Phase 3.2: Эмоциональная sine-трель для финальной сцены с РАЙГАРОМ.
+//   Медленная, мажорная, не торжествующая — благодарная.
+function sfxEmotional() {
+  if (!AC) return;
+  bip(440, .9, .12, 'sine', 440, 660);                      // мягкий подъём
+  setTimeout(() => bip(660, .9, .10, 'sine', 660, 523), 350); // спуск
+  setTimeout(() => bip(784, 1.4, .12, 'sine', 784, 784), 800);// тёплая сустейн-нота
+}
+
 function toggleFullscreen() {
   try {
     if (!document.fullscreenElement) {
