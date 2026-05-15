@@ -125,8 +125,12 @@ function updGameOver(G){
           // Полёт начинается заново от исходной планеты к той же цели
           initSpace(G);
         }else if(cp.type==='tina'){
-          // Бой с Тиной начинается заново
+          // Бой с Тиной начинается заново с фазы 1
           initFinaleTina(G);
+        }else if(typeof cp.type==='string'&&cp.type.indexOf('finale_phase_')===0){
+          // ★ Phase 2.3: чекпоинт между фазами Тины — возврат на ту же фазу с полным HP
+          const tp=parseInt(cp.type.slice('finale_phase_'.length),10)||2;
+          restoreFinalePhase(G,tp,cp.tinaHp||null);
         }else{
           const fresh=newGame();
           for(const k in G){if(G.hasOwnProperty(k))delete G[k];}

@@ -37,16 +37,27 @@ function updTinaBattle(G){
       T.phase=pT.toPhase;
       if(pT.toPhase===2){
         spawnTinaTurrets(T);
+        T.subphase='2';
+        T.droneCD=99999; // ★ Phase 2.3: дронов нет, пока не вошли в субфазу 2.5
         G.briefing={t:0,planet:'tina_phase2'};
+        // ★ Чекпоинт: 1→2
+        saveCheckpoint(G,'finale_phase_2');
       }else if(pT.toPhase===3){
-        spawnTinaWeakSpots(T);
+        spawnTinaWeakSpots(T,1);     // ★ Phase 2.3: ОДНА брешь в начале фазы 3
+        T.subphase='3';
         G.briefing={t:0,planet:'tina_phase3'};
+        // ★ Чекпоинт: 2→3
+        saveCheckpoint(G,'finale_phase_3');
       }else if(pT.toPhase===4){
-        // ★ v24b: Фаза 4 — щели быстрее, дроны агрессивнее, стрельба быстрее
+        // ★ Phase 2.3: вход в фазу 4 — добавляем 3-ю брешь (если нет), включаем rage
+        if(T.weakSpots.length<3)addTinaWeakSpot(T);
         for(const ws of T.weakSpots)ws.orbitSpd=0.013;
+        T.subphase='4';
         T.droneCD=Math.min(T.droneCD,80);
         T.shootCD=Math.min(T.shootCD,40);
         G.briefing={t:0,planet:'tina_phase4'};
+        // ★ Чекпоинт: 3→4
+        saveCheckpoint(G,'finale_phase_4');
       }
       shake(10);flash(.5,pT.toPhase===4?'#ffaa00':pT.toPhase===2?P.RED:P.YEL);sfxBoss();
       T.phaseTransition=null;
@@ -121,8 +132,11 @@ function updTinaBattle(G){
   }
 
   // Движение ТИНЫ (медленное в фазе 1, активнее дальше)
+  // ★ Phase 2.3: в субфазе 1.5 — скорость x1.2 (предчувствие фазы 2)
   if(T.phase===1){
-    T.y+=Math.sin(T.t*0.04)*0.4;
+    const sp=T.subphase==='1.5'?0.048:0.04;
+    const amp=T.subphase==='1.5'?0.5:0.4;
+    T.y+=Math.sin(T.t*sp)*amp;
   } else {
     T.y+=(p.y-T.y)*0.012+Math.sin(T.t*0.03)*0.5;
   }
@@ -196,12 +210,22 @@ function updTinaBattle(G){
         G.buls.splice(j,1);
       }
     }
-    // Тина обстреливает — 3 паттерна, частота нарастает с уничтожением блоков
+    // ★ Phase 2.3: вход в субфазу 1.5 — когда уничтожено 2 из 3 блоков
+    const aliveCountForSub=T.energyBlocks.filter(e=>e.alive).length;
+    if(aliveCountForSub===1&&T.subphase==='1'&&!T._subphaseTriggered['1.5']){
+      T._subphaseTriggered['1.5']=true;
+      T.subphase='1.5';
+      G.notif='ТИНА УСКОРЯЕТСЯ! ОСТАЛСЯ 1 БЛОК!';G.notifT=120;G.notifCol=P.ORA;
+      flash(.3,P.ORA);shake(4);
+    }
+    // Тина обстреливает — 3 паттерна (4 в субфазе 1.5 — добавляется спираль)
     T.shootCD--;
     if(T.shootCD<=0){
       const angle=Math.atan2(p.y-T.y,p.x-T.x);
       const blocksAlive=T.energyBlocks.filter(e=>e.alive).length;
-      const pat=T.attackPattern%3;
+      // В субфазе 1.5 — 4 паттерна (добавлен 3 = спиральный залп)
+      const patCount=T.subphase==='1.5'?4:3;
+      const pat=T.attackPattern%patCount;
       if(pat===0){
         // Отслеживающий лазер
         G.ebuls.push({x:T.x-50,y:T.y,vx:Math.cos(angle)*2.6,vy:Math.sin(angle)*2.6,isTina:true,kind:'laser',dmg:10,tracking:true,target:p});
@@ -213,15 +237,22 @@ function updTinaBattle(G){
           G.ebuls.push({x:T.x-80,y:T.y,vx:Math.cos(a)*2.1,vy:Math.sin(a)*2.1,isTina:true,kind:'energyBurst',dmg:14});
         }
         bip(160,.2,.2,'sawtooth',220,100);flash(.15,P.TINA3);addShockwave(T.x-80,T.y,14,P.TINA3,8);
-      }else{
+      }else if(pat===2){
         // ★ v24b: Двойной лазер с двух точек
         for(let i=-1;i<=1;i+=2){
           G.ebuls.push({x:T.x-50,y:T.y+i*35,vx:Math.cos(angle)*3.1,vy:Math.sin(angle)*3.1,isTina:true,kind:'laser',dmg:11});
         }
         bip(150,.12,.15,'sawtooth',200,90);addShockwave(T.x-50,T.y,10,P.TINA2,6);
+      }else{
+        // ★ Phase 2.3 / субфаза 1.5: спиральный залп — 6 снарядов по кругу
+        for(let i=0;i<6;i++){
+          const sa=i/6*Math.PI*2+T.t*0.025;
+          G.ebuls.push({x:T.x+Math.cos(sa)*60,y:T.y+Math.sin(sa)*60,vx:Math.cos(sa)*2.0,vy:Math.sin(sa)*2.0,isTina:true,kind:'spiral',dmg:8,lifeMax:80});
+        }
+        bip(110,.18,.2,'sawtooth',150,70);shake(3);addShockwave(T.x,T.y,18,P.PUR,12);
       }
       T.attackPattern++;
-      T.shootCD=blocksAlive===3?100:blocksAlive===2?75:55;
+      T.shootCD=blocksAlive===3?100:blocksAlive===2?75:T.subphase==='1.5'?45:55;
     }
   }
 
@@ -344,25 +375,35 @@ function updTinaBattle(G){
       T.attackPattern++;
       T.shootCD=70+(pat===2?50:pat===4||pat===5?40:0);
     }
-    // ★ v16 r12 #8: Призыв дронов каждые ~5 сек (фаза 2+)
-    T.droneCD--;
-    if(T.droneCD<=0&&T.drones.length<3){
-      // Спавним дрона на краю Тины
-      const ang=Math.random()*Math.PI*2;
-      const sx=T.x+Math.cos(ang)*(TINA_R+10);
-      const sy=T.y+Math.sin(ang)*(TINA_R+10);
-      T.drones.push({
-        x:sx,y:sy,vx:0,vy:0,
-        hp:18,mhp:18,
-        t:0,
-        flash:0,
-        cd:60+Math.floor(Math.random()*30) // первый выстрел через секунду
-      });
-      // Эффект спавна
-      spPts(sx,sy,12,[P.TINA3,P.YEL,P.WHT],.5,2.5,16,0,1.4);
-      addShockwave(sx,sy,10,P.TINA2,8);
-      bip(280,.15,.15,'square',360,180);
-      T.droneCD=300; // 5 сек до следующего
+    // ★ Phase 2.3: переход 2 → 2.5 — когда суммарное HP турелей <= 50%
+    if(T.subphase==='2'){
+      let trHp=0,trMax=0;
+      for(const tr of T.turrets){if(tr.alive){trHp+=tr.hp;}trMax+=tr.maxHp;}
+      if(trMax>0&&trHp/trMax<=0.5&&!T._subphaseTriggered['2.5']){
+        T._subphaseTriggered['2.5']=true;
+        T.subphase='2.5';
+        T.droneCD=60; // запускаем спавн дронов почти сразу
+        G.notif='ТИНА ПРИЗЫВАЕТ ДРОНОВ!';G.notifT=120;G.notifCol=P.PUR;
+        flash(.3,P.PUR);shake(4);
+      }
+    }
+    // ★ Phase 2.3: дроны спавнятся ТОЛЬКО в субфазе 2.5+
+    if(T.subphase==='2.5'){
+      T.droneCD--;
+      if(T.droneCD<=0&&T.drones.length<3){
+        const ang=Math.random()*Math.PI*2;
+        const sx=T.x+Math.cos(ang)*(TINA_R+10);
+        const sy=T.y+Math.sin(ang)*(TINA_R+10);
+        T.drones.push({
+          x:sx,y:sy,vx:0,vy:0,
+          hp:18,mhp:18,t:0,flash:0,
+          cd:60+Math.floor(Math.random()*30)
+        });
+        spPts(sx,sy,12,[P.TINA3,P.YEL,P.WHT],.5,2.5,16,0,1.4);
+        addShockwave(sx,sy,10,P.TINA2,8);
+        bip(280,.15,.15,'square',360,180);
+        T.droneCD=300;
+      }
     }
   }
 
@@ -372,6 +413,28 @@ function updTinaBattle(G){
     for(const ws of T.weakSpots){
       ws.t++;
       ws.orbitA+=ws.orbitSpd;
+    }
+    // ★ Phase 2.3: каждый кадр прогнозируем, попадёт ли пуля в брешь, и маркируем b._danger.
+    //   Используется в drwBul: пули, которые отскочат, рисуются жёлто-красными — игрок видит риск.
+    const _sR=TINA_R+18;
+    for(const b of G.buls){
+      const _dx=b.x-T.x,_dy=b.y-T.y;
+      const _dist=Math.hypot(_dx,_dy);
+      if(_dist>_sR+2&&_dist<_sR+120){
+        // Прогноз: за ~6 кадров куда летит снаряд → угол к центру Тины
+        const fx=b.x+(b.vx||0)*6,fy=b.y+(b.vy||0)*6;
+        const fa=Math.atan2(fy-T.y,fx-T.x);
+        let inB=false;
+        for(const ws of T.weakSpots){
+          let diff=fa-ws.orbitA;
+          while(diff>Math.PI)diff-=Math.PI*2;
+          while(diff<-Math.PI)diff+=Math.PI*2;
+          if(Math.abs(diff)<ws.arcWidth){inB=true;break;}
+        }
+        b._danger=!inB;
+      } else {
+        b._danger=false;
+      }
     }
     // Снаряды игрока vs щит и бреши
     for(let i=G.buls.length-1;i>=0;i--){
@@ -388,8 +451,17 @@ function updTinaBattle(G){
         fText(b.x,b.y-12,'ПРОБИТО! x2',P.YEL);
         p.cr+=10;
         if(T.hp<=0){T.hp=0;tinaDie(G);return;}
-        // ★ v24b: Переход в фазу 4 при 25% HP
-        if(T.hp<=T.mhp*0.25&&T.phase===3&&!T.phase4entered&&!T.phaseTransition){
+        // ★ Phase 2.3: переход 3 → 3.5 при HP < 30% — добавляется ВТОРАЯ брешь, бреши ускоряются до 0.010
+        if(T.hp<=T.mhp*0.30&&T.subphase==='3'&&!T._subphaseTriggered['3.5']){
+          T._subphaseTriggered['3.5']=true;
+          T.subphase='3.5';
+          if(T.weakSpots.length<2)addTinaWeakSpot(T);
+          for(const ws of T.weakSpots)ws.orbitSpd=0.010;
+          G.notif='ВТОРАЯ БРЕШЬ! БРЕШИ УСКОРЯЮТСЯ!';G.notifT=140;G.notifCol=P.YEL;
+          flash(.4,P.YEL);shake(6);sfxBoss();
+        }
+        // ★ Phase 2.3: переход 3.5 → 4 при HP < 15% (раньше было 25%)
+        if(T.hp<=T.mhp*0.15&&T.phase===3&&!T.phase4entered&&!T.phaseTransition){
           T.phase4entered=true;
           T.phaseTransition={t:0,toPhase:4,duration:120};
           G.ebuls=[];G.buls=[];shake(18);flash(.9,'#ffaa00');sfxBoss();sfxX(2.5);

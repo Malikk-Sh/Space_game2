@@ -1318,6 +1318,18 @@ const ep=.6+.4*Math.sin(Date.now()*.025);cx.globalAlpha=ep*.45;disc(x,y,9,'#ff66
 const pulse=.7+.3*Math.sin(Date.now()*.02);cx.globalAlpha=pulse*.8;disc(x,y,4,'#330022');cx.globalAlpha=1;disc(x,y,2,'#ff44ff');if(Math.random()<.5)PTS.push({x,y,vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.5,lf:8,ml:10,col:'#ff44ff',sz:1,gv:0,fade:.7});return;}rc(x-2,y-1,4,2,P.PIR3);rc(x-1,y,2,1,'#ffcc88');if(Math.random()<.6)PTS.push({x:x+2,y:y,vx:0.3+Math.random(),vy:(Math.random()-.5)*.2,lf:8,ml:10,col:'#882211',sz:1,gv:0,fade:.6});}
 function drwBul(b){
   const x=b.x|0,y=b.y|0;
+  // ★ Phase 2.3: маркер «отскочит» — жёлто-красный ореол поверх обычного снаряда.
+  //   Флаг ставится в updTinaBattle для фаз 3+ когда снаряд не пройдёт через брешь.
+  if(b._danger){
+    const pulse=.5+.5*Math.sin((b.t||0)*.4);
+    cx.globalAlpha=.35+pulse*.35;
+    cx.fillStyle=P.RED;
+    cx.fillRect(x-3,y-3,9,6);
+    cx.globalAlpha=.5+pulse*.4;
+    cx.fillStyle=P.YEL;
+    cx.fillRect(x-2,y-2,8,4);
+    cx.globalAlpha=1;
+  }
   // ★ Луч — растянутая зелёная полоса с белым ядром
   if(b.beam){
     cx.globalAlpha=.4;rc(x-2,y-1,12,3,P.L2L);cx.globalAlpha=.9;
