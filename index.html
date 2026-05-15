@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#05050f">
+  <title>SINTARA - Осколки Звезды (v0.9)</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="rot">
+    <div class="ico">⟲</div>
+    <div>ПОВЕРНИТЕ УСТРОЙСТВО<br>ГОРИЗОНТАЛЬНО</div>
+  </div>
+
+  <!-- Игровой код разбит на 18 модулей. Порядок подключения важен:
+       объявления верхнего уровня (const/let) в одном <script> видны
+       последующим, поэтому каждый файл может ссылаться на имена из
+       уже загруженных. Тела функций резолвят имена в момент вызова —
+       форвард-референсы между модулями (например, landOnTargetPlanet
+       → initPlanetDrosh) безопасны.                                     -->
+
+  <!-- Базовые константы и палитра -->
+  <script src="js/01-core.js"></script>
+  <!-- Сохранения и DEV-флаги -->
+  <script src="js/02-checkpoint.js"></script>
+  <!-- Реестр планет и диспетчер посадки -->
+  <script src="js/03-planets-registry.js"></script>
+  <!-- Битмап-шрифт и текстовый рендер -->
+  <script src="js/04-font.js"></script>
+  <!-- Аудио: музыка + SFX через Web Audio API -->
+  <script src="js/05-audio.js"></script>
+  <!-- Ввод: клавиатура, тач, джойстик, экранные кнопки -->
+  <script src="js/06-input.js"></script>
+  <!-- Эффекты: shake, flash, частицы, всплывающий текст -->
+  <script src="js/07-effects.js"></script>
+  <!-- Графические примитивы и фон (звёзды, туманности) -->
+  <script src="js/08-primitives-bg.js"></script>
+  <!-- Рендер сущностей: корабль, астероиды, пираты, боссы -->
+  <script src="js/09-entities.js"></script>
+  <!-- HUD, джойстик-UI, квест-панель, туториал -->
+  <script src="js/10-hud-ui.js"></script>
+  <!-- Игровое состояние G + newGame + пауза -->
+  <script src="js/11-game-state.js"></script>
+  <!-- Сцена космоса + диалоги -->
+  <script src="js/12-scene-space.js"></script>
+  <!-- NPC (рендер и графы диалогов) -->
+  <script src="js/13-npcs.js"></script>
+  <!-- Планетарные сцены: Дрош, Бубблика, Краснозём -->
+  <script src="js/14-scenes-planets.js"></script>
+  <!-- Внутренности корабля -->
+  <script src="js/15-scene-ship.js"></script>
+  <!-- Финальный бой с Тиной -->
+  <script src="js/16-scene-finale.js"></script>
+  <!-- Интро-катсцена и титульный экран -->
+  <script src="js/17-scenes-intro-title.js"></script>
+  <!-- Меню, титры, game-over и главный цикл — ОБЯЗАТЕЛЬНО последним -->
+  <script src="js/18-main.js"></script>
+</body>
+</html>

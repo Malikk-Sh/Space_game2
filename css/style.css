@@ -1,0 +1,72 @@
+/* ============================================================
+   SINTARA — стили
+   Извлечено из inline <style> в sintara_v25.html (строка 4).
+   ============================================================ */
+
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Layout — полноэкранное центрирование */
+html, body {
+  background: #000;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  overscroll-behavior: none;
+  font-family: monospace;
+}
+
+/* Canvas — пиксельный рендер + свечение */
+canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+  box-shadow:
+    0 0 30px rgba(0, 150, 255, 0.15),
+    0 0 80px rgba(80, 20, 160, 0.08);
+}
+
+/* Оверлей "поверните устройство" (только на тач + портрет) */
+#rot {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 99;
+  color: #3bf;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: monospace;
+  font-size: 14px;
+  letter-spacing: 2px;
+  padding: 20px;
+}
+
+#rot.on {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#rot .ico {
+  font-size: 40px;
+  animation: rot 2s infinite;
+}
+
+@keyframes rot {
+  0%, 100% { transform: rotate(0); }
+  50%      { transform: rotate(90deg); }
+}
