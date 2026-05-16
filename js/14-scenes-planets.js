@@ -237,7 +237,7 @@ function updPlanetDrosh(G){
     }
   }
 
-  if(KD.Tab||btnJust('ship')){startTrans(()=>{G.shipReturnState='planet_drosh';G.state='ship_view';G.shipT=0;TAP_FIRE=false;resetBtns();addBtn('back',20,24,10,'<',P.UIT);ALLOW_JOY=false;TOUCH.joyId=-1;TOUCH.joyActive=false;});}
+  if(KD.Tab||btnJust('ship')){startTrans(()=>{G.shipReturnState='planet_drosh';G.state='ship_view';G.shipUI='main';G.shipT=0;TAP_FIRE=false;resetBtns();addBtn('back',20,24,10,'<',P.UIT);ALLOW_JOY=false;TOUCH.joyId=-1;TOUCH.joyActive=false;});}
   // ★ v16 r5 #1: Убран квест "5 ресурсов → починка генератора". Теперь взлёт только после
   // выполнения квеста на УДЕРЖАНИЕ 5 маяков (droshSide.done). Зажигание маяков — промежуточный этап.
   // Чертёж лазера выдаём как награду за удержание маяков (раз бесплатно достаётся).
@@ -1166,7 +1166,7 @@ function updPlanetBubblika(G){
   if(B.sporeShieldT>0)B.sporeShieldT--;
 
   if((KD.KeyE||KD.Enter||btnJust('int'))&&nearNPC)startDlgGraph(G,nearNPC);
-  if(KD.Tab||btnJust('ship')){startTrans(()=>{G.shipReturnState='planet_bubblika';G.state='ship_view';G.shipT=0;TAP_FIRE=false;resetBtns();addBtn('back',20,24,10,'<',P.UIT);ALLOW_JOY=false;TAP_FIRE=false;TOUCH.joyId=-1;TOUCH.joyActive=false;});}
+  if(KD.Tab||btnJust('ship')){startTrans(()=>{G.shipReturnState='planet_bubblika';G.state='ship_view';G.shipUI='main';G.shipT=0;TAP_FIRE=false;resetBtns();addBtn('back',20,24,10,'<',P.UIT);ALLOW_JOY=false;TAP_FIRE=false;TOUCH.joyId=-1;TOUCH.joyActive=false;});}
   // ★ v16 r4 (other-2): Чертёж от Блаба сам по себе НЕ открывает взлёт. Нужны оба:
   // 1) Завершённая доставка от Пфффта (5/5)
   // 2) Чертёж щита от Блаба
@@ -1925,7 +1925,7 @@ function updPlanetKrasnozem(G){
     spPts(LW/2,LH/2,42,[P.YEL,P.WHT,P.KRZ3,P.CYA],1,4,45,.02,2);addShockwave(LW/2,LH/2,42,P.YEL,35);flash(.45,P.YEL);sfxPU();setTimeout(sfxPU,90);setTimeout(sfxPU,180);
   }
 
-  if(KD.Tab||btnJust('ship')){startTrans(()=>{G.shipReturnState='planet_krasnozem';G.state='ship_view';G.shipT=0;TAP_FIRE=false;resetBtns();addBtn('back',20,24,10,'<',P.UIT);ALLOW_JOY=false;TOUCH.joyId=-1;TOUCH.joyActive=false;});}
+  if(KD.Tab||btnJust('ship')){startTrans(()=>{G.shipReturnState='planet_krasnozem';G.state='ship_view';G.shipUI='main';G.shipT=0;TAP_FIRE=false;resetBtns();addBtn('back',20,24,10,'<',P.UIT);ALLOW_JOY=false;TOUCH.joyId=-1;TOUCH.joyActive=false;});}
   if(G.krasDone&&(KD.KeyL||(USE_TOUCH_UI&&btnJust('launch')))){
     sfxLand();
     if(!G.campaignState.planetsCompleted.includes('krasnozem'))G.campaignState.planetsCompleted.push('krasnozem');

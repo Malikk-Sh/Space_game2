@@ -11,6 +11,9 @@ function updShip(G){
   // Туториал блокирует игровой ввод
   if(G.tutorial){updTutorial(G);return;}
   G.shipT++;if(G.notifT>0)G.notifT--;
+  // ★ PR C: если открыт sub-screen — обрабатываем его и выходим
+  if(G.shipUI==='workshop'){updShipWorkshop(G);updFTX();return;}
+  if(G.shipUI==='workers'){updShipWorkers(G);updFTX();return;}
 
   // === ТУТОРИАЛ КОРАБЛЯ (только при первом входе) ===
   if(!G.campaignState.flags.tutShipShown&&G.shipT===1){
@@ -43,6 +46,10 @@ function updShip(G){
     },100);
   }
 
+  // ★ PR C: Tab/back на sub-screen — возврат к главному экрану корабля (а не выход)
+  if((KD.Tab||btnJust('back'))&&G.shipUI&&G.shipUI!=='main'){
+    G.shipUI='main';sfxUI();return;
+  }
   if(KD.Tab||btnJust('back')){sfxUI();startTrans(()=>{ALLOW_JOY=true;TAP_FIRE=false;G.state=G.shipReturnState||'planet_drosh';resetBtns();
     if(G.state==='planet_drosh'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);}
     else if(G.state==='planet_bubblika'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);addBtn('jump',LW-20,LH-48,12,'J',P.CYA);}
@@ -84,14 +91,6 @@ function updShip(G){
     if(hits){
       for(const h of hits){
         if(mX>=h.x&&mX<=h.x+h.w&&mY>=h.y&&mY<=h.y+h.h){
-          // ★ Phase 2.4: клик по +/- — переназначение рабочего
-          if(h.workerAction){
-            const ok=reallocWorkers(G,h.workerRoom,h.workerAction==='plus'?+1:-1);
-            if(ok){sfxUI();fText(h.x+h.w/2,h.y+12,h.workerAction==='plus'?'+1':'-1',P.EN);}
-            else{sfxHit();fText(h.x+h.w/2,h.y+12,'X',P.RED);}
-            mC=false;
-            break;
-          }
           sfxUI2();
           if(h.action){h.action(G);fText(h.x+h.w/2,h.y+12,'OK',h.col);}
           else{fText(h.x+h.w/2,h.y+12,'INFO',h.col);G.notif=h.notif;G.notifT=120;G.notifCol=h.col;}
@@ -268,6 +267,9 @@ function drwRoomWorkstation(G,x,y){
 }
 
 function drwShipView(G){
+  // ★ PR C: диспетчер sub-screens — мастерская и распределение рабочих
+  if(G.shipUI==='workshop'){drwShipWorkshop(G);return;}
+  if(G.shipUI==='workers'){drwShipWorkers(G);return;}
   // ===== ВЕРХНЯЯ ПАНЕЛЬ =====
   rc(0,0,LW,LH,'#020610');
   // Тонкая решётка фона - имитация интерфейса
@@ -326,13 +328,15 @@ function drwShipView(G){
   ensureShipWorkers(G);
   const _w=G.ship.workers;
   const rooms=[
+    // ★ PR C: чистые подсказки без аббревиатур. Воркеры теперь на отдельном экране (клик по Power открывает его).
     {col:0,row:0,id:'power',name:'ЭЛЕКТРОСТАНЦИЯ',col2:P.EN,
-     hint:'РАБ '+_w.power+'/'+G.pl.workers+' (+'+(_w.power*0.18).toFixed(2)+' EN)',
-     status:'info',workerRoom:'power',
-     action:null, notif:'РАБОЧИЕ ВЫРАБАТЫВАЮТ ЭНЕРГИЮ. БОЛЬШЕ РАБОЧИХ - БЫСТРЕЕ.'},
+     hint:'РАБОЧИЕ: '+G.pl.workers+'   ОТКРЫТЬ →',
+     status:'info',
+     action:(G)=>{G.shipUI='workers';sfxUI2();},
+     notif:'РАСПРЕДЕЛЕНИЕ РАБОЧИХ ПО ОТСЕКАМ КОРАБЛЯ.'},
     {col:1,row:0,id:'fuel',name:'ТОПЛИВО',col2:P.RES,
-     hint:FEED_COST+' РЕС=>'+FEED_FUEL+'% | РАБ '+_w.fuel+' (-'+(_w.fuel*5)+'% расхода)',
-     status:fuelStatus,workerRoom:'fuel',
+     hint:'ОБМЕН: '+FEED_COST+' РЕСУРСА → +'+FEED_FUEL+'% ТОПЛИВА',
+     status:fuelStatus,
      action:(G)=>{
        if(G.pl.res>=FEED_COST){
          G.pl.res-=FEED_COST;G.ship.fuel=Math.min(100,G.ship.fuel+FEED_FUEL);
@@ -344,52 +348,17 @@ function drwShipView(G){
      },
      notif:'ЗАПРАВКА КОРАБЛЯ ТОПЛИВОМ.'},
     {col:0,row:1,id:'workshop',name:'ВЕРСТАК',col2:P.GRN,
+     // ★ PR C: верстак — индикатор + клик открывает отдельный экран мастерской.
      hint:(G.ship.craftQueue&&G.ship.craftQueue.length>0
-       ? G.ship.craftQueue[0].short+' '+((G.ship.craftQueue[0].progress/G.ship.craftQueue[0].total*100)|0)+'% | РАБ '+_w.workshop
-       : workshopHint),
-     status:workshopStatus,workerRoom:'workshop',
-     action:(G)=>{
-       // ★ Phase 2.4: тап → ставим в очередь крафта (вместо мгновенной сборки).
-       //   Прогресс продвигается в полёте по количеству рабочих в Workshop.
-       const inv2=G.campaignState.inventory;
-       // Защита от двойной очереди одинаковых предметов
-       ensureShipWorkers(G);
-       const queued=new Set((G.ship.craftQueue||[]).map(c=>c.id));
-       const items=[
-         {unbuilt:inv2.laserBlueprint&&!inv2.laserStrong, label:'ЛАЗЕР L2', short:'Л2', cost:90, matCost:0, id:'l2', total:480},
-         {unbuilt:inv2.bubblikaContract&&!inv2.shieldBuilt, label:'ЩИТ', short:'ЩИТ', cost:60, matCost:0, id:'shield', total:360},
-         // ★ Balance #9: цены снижены (синхронизировано с hint-таблицей)
-         {unbuilt:!inv2.spreadUnlocked,  label:'СПРЕД',  short:'СПРЕД',  cost:30,  matCost:0, id:'spread',  total:300},
-         {unbuilt:!inv2.missileUnlocked, label:'РАКЕТА', short:'РАКЕТА', cost:50,  matCost:1, id:'missile', total:600},
-         {unbuilt:!inv2.beamUnlocked,    label:'ЛУЧ',    short:'ЛУЧ',    cost:80,  matCost:1, id:'beam',    total:840},
-         {unbuilt:!inv2.burstUnlocked,   label:'БЁРСТ',  short:'БЁРСТ',  cost:100, matCost:2, id:'burst',   total:960},
-       ].filter(i=>!queued.has(i.id));
-       const next=items.find(i=>i.unbuilt);
-       if(!next){
-         if(G.ship.craftQueue.length>0){
-           G.notif='ОЧЕРЕДЬ ЗАГРУЖЕНА — ЛЕТИ В КОСМОС!';G.notifT=100;G.notifCol=P.CYA;sfxUI();
-         } else {
-           G.notif='ВСЁ СОБРАНО! ЛЕТИ К ТИНЕ!';G.notifT=100;G.notifCol=P.GRN;sfxUI();
-         }
-         return;
-       }
-       if(next.id==='l2'&&!inv2.laserBlueprint){G.notif='НУЖЕН ЧЕРТЁЖ Л2 (ДРОШ)';G.notifT=90;G.notifCol=P.YEL;sfxHit();return;}
-       if(next.id==='shield'&&!inv2.bubblikaContract){G.notif='НУЖЕН ЧЕРТЁЖ ЩИТА (БУББЛИКА)';G.notifT=90;G.notifCol=P.YEL;sfxHit();return;}
-       const haveCR=G.pl.cr, haveMat=G.campaignState.materials||0;
-       if(haveCR<next.cost){G.notif=next.short+': НУЖНО '+next.cost+' КР (ЕСТЬ '+haveCR+')';G.notifT=90;G.notifCol=P.RED;sfxHit();return;}
-       if(haveMat<next.matCost){G.notif=next.short+': НУЖНО '+next.matCost+' МАТЕР. (ЕСТЬ '+haveMat+')';G.notifT=90;G.notifCol=P.RED;sfxHit();return;}
-       // Списываем стоимость и ставим в очередь
-       G.pl.cr-=next.cost;
-       G.campaignState.materials=haveMat-next.matCost;
-       G.ship.craftQueue.push({id:next.id,short:next.short,progress:0,total:next.total});
-       G.notif=next.short+' В ОЧЕРЕДИ: '+next.total+' ЕД. ЛЕТИ В КОСМОС!';
-       G.notifT=130;G.notifCol=P.CYA;sfxUI2();sfxPU();
-       flash(.2,P.CYA);spPts(LW/2,LH/2,12,[P.CYA,P.WHT],.4,2,14);
-     },
-     notif:'ОЧЕРЕДЬ КРАФТА. ПРОГРЕСС ИДЁТ В ПОЛЁТЕ.'},
+       ? 'В РАБОТЕ: '+G.ship.craftQueue[0].short+' ('+((G.ship.craftQueue[0].progress/G.ship.craftQueue[0].total*100)|0)+'%)'
+       : 'ОТКРЫТЬ →'),
+     status:workshopStatus,
+     action:(G)=>{G.shipUI='workshop';sfxUI2();},
+     notif:'СОЗДАНИЕ И ОЧЕРЕДЬ КРАФТА. ПРОГРЕСС ИДЁТ В ПОЛЁТЕ.'},
     {col:1,row:1,id:'bridge',name:'МОСТИК',col2:P.UIT,
-     hint:((PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh).name)+' | РАБ '+_w.bridge+' (-'+(_w.bridge*5)+'% урон)',
-     status:'info',workerRoom:'bridge',
+     // ★ PR C: чистый указатель курса
+     hint:'КУРС: '+((PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh).name),
+     status:'info',
      action:null, notif:'НАВИГАЦИЯ И КУРС КОРАБЛЯ.'},
   ];
 
@@ -487,20 +456,7 @@ function drwShipView(G){
       x:rx,y:ry,w:cellW,h:cellH,
       action:rm.action, col:rm.col2, notif:rm.notif
     });
-    // ★ Phase 2.4: +/- кнопки распределения рабочих в правом-верхнем углу
-    if(rm.workerRoom){
-      const bw=8,bh=8;
-      const mx=rx+cellW-bw-2, mxx=mx-bw-2; // [-] левее
-      const my=ry+2;
-      // Кнопка [-]
-      rc(mxx,my,bw,bh,'#1a1a1a');rc(mxx+1,my+1,bw-2,bh-2,'#332222');
-      txt('-',mxx+3,my+2,_w[rm.workerRoom]>0?P.RED:'#664444',1);
-      // Кнопка [+]
-      rc(mx,my,bw,bh,'#1a1a1a');rc(mx+1,my+1,bw-2,bh-2,'#223322');
-      txt('+',mx+3,my+2,P.GRN,1);
-      G._shipRoomHits.push({x:mxx,y:my,w:bw,h:bh,workerAction:'minus',workerRoom:rm.workerRoom,col:P.UIT,notif:''});
-      G._shipRoomHits.push({x:mx,y:my,w:bw,h:bh,workerAction:'plus',workerRoom:rm.workerRoom,col:P.UIT,notif:''});
-    }
+    // ★ PR C: маленькие +/- убраны — распределение воркеров теперь на отдельном экране (G.shipUI='workers')
   }
 
   // ===== ПРАВАЯ ПАНЕЛЬ ДАННЫХ =====
@@ -534,22 +490,19 @@ function drwShipView(G){
   rc(panelX+3,py,panelW-7,1,'#1a3550');py+=3;
 
   // ===== РАЗДЕЛ "РЕСУРСЫ" =====
+  // ★ PR C: чистые названия без сокращений
   txs('РЕСУРСЫ',panelX+3,py,P.UIT2,P.BLK,1);py+=8;
-  txs('КР '+G.pl.cr,panelX+3,py,P.YEL,P.BLK,1);
-  txs('РЕ '+G.pl.res,panelX+3+(panelW>>1),py,P.RES,P.BLK,1);py+=8;
-  // ★ Phase 2.4: компактное распределение рабочих
+  txs('КРЕДИТЫ: '+G.pl.cr,panelX+3,py,P.YEL,P.BLK,1);py+=7;
+  txs('РЕСУРСЫ: '+G.pl.res,panelX+3,py,P.RES,P.BLK,1);py+=7;
   ensureShipWorkers(G);
-  const _ww=G.ship.workers;
-  txs('РАБ '+G.pl.workers+': P'+_ww.power+' F'+_ww.fuel+' B'+_ww.bridge+' W'+_ww.workshop,panelX+3,py,P.EN,P.BLK,1);py+=8;
-  // Строка очереди крафта
+  txs('РАБОЧИЕ: '+G.pl.workers,panelX+3,py,P.EN,P.BLK,1);py+=7;
+  const _statMat=G.campaignState.materials||0;
+  if(_statMat>0){txs('МАТЕРИАЛЫ: '+_statMat,panelX+3,py,P.CYA,P.BLK,1);py+=7;}
+  // Очередь крафта — только индикатор «идёт работа», детали на экране мастерской
   if(G.ship.craftQueue&&G.ship.craftQueue.length>0){
     const cq=G.ship.craftQueue[0];
     const pct=(cq.progress/cq.total*100)|0;
-    txs(cq.short+' '+pct+'%',panelX+3,py,P.CYA,P.BLK,1);py+=6;
-    bar(panelX+3,py,panelW-7,2,cq.progress/cq.total,P.CYA,'#001122');py+=4;
-    if(G.ship.craftQueue.length>1){
-      txs('+'+(G.ship.craftQueue.length-1)+' В ОЧЕРЕДИ',panelX+3,py,P.DIM,P.BLK,1);py+=7;
-    }
+    txs('КРАФТ: '+pct+'%',panelX+3,py,P.CYA,P.BLK,1);py+=7;
   }
   // Разделитель
   rc(panelX+3,py,panelW-7,1,'#1a3550');py+=3;
@@ -1208,3 +1161,221 @@ function addTinaWeakSpot(T){
   });
 }
 
+
+// ============================================================
+// ★ PR C: ОТДЕЛЬНЫЕ ЭКРАНЫ КОРАБЛЯ (мастерская + распределение рабочих)
+// ============================================================
+
+// Список всех крафтовых предметов с актуальными ценами (синхронизирован с balance pass)
+function _workshopItems(G){
+  const inv=G.campaignState.inventory;
+  return [
+    {id:'l2',     label:'ЛАЗЕР L2', cost:90,  matCost:0, total:480,
+      have:inv.laserStrong, lock:!inv.laserBlueprint, lockHint:'НУЖЕН ЧЕРТЁЖ (ДРОШ)'},
+    {id:'shield', label:'ЭНЕРГОЩИТ', cost:60, matCost:0, total:360,
+      have:inv.shieldBuilt, lock:!inv.bubblikaContract, lockHint:'НУЖЕН ЧЕРТЁЖ (БУББЛИКА)'},
+    {id:'spread', label:'СПРЕД',   cost:30, matCost:0, total:300, have:inv.spreadUnlocked},
+    {id:'missile',label:'РАКЕТА',  cost:50, matCost:1, total:600, have:inv.missileUnlocked},
+    {id:'beam',   label:'ЛУЧ',     cost:80, matCost:1, total:840, have:inv.beamUnlocked},
+    {id:'burst',  label:'БЁРСТ',   cost:100,matCost:2, total:960, have:inv.burstUnlocked},
+  ];
+}
+
+// Поставить конкретный предмет в очередь крафта (используется кнопкой на экране мастерской)
+function _queueWeapon(G,itemId){
+  ensureShipWorkers(G);
+  const inv=G.campaignState.inventory;
+  const item=_workshopItems(G).find(i=>i.id===itemId);
+  if(!item)return;
+  if(item.have){G.notif='УЖЕ ПОСТРОЕНО';G.notifT=80;G.notifCol=P.YEL;sfxHit();return;}
+  if(item.lock){G.notif=item.lockHint;G.notifT=90;G.notifCol=P.YEL;sfxHit();return;}
+  if((G.ship.craftQueue||[]).some(c=>c.id===itemId)){G.notif='УЖЕ В ОЧЕРЕДИ';G.notifT=80;G.notifCol=P.YEL;sfxHit();return;}
+  const haveCR=G.pl.cr, haveMat=G.campaignState.materials||0;
+  if(haveCR<item.cost){G.notif='МАЛО КРЕДИТОВ ('+item.cost+')';G.notifT=90;G.notifCol=P.RED;sfxHit();return;}
+  if(haveMat<item.matCost){G.notif='МАЛО МАТЕРИАЛОВ ('+item.matCost+')';G.notifT=90;G.notifCol=P.RED;sfxHit();return;}
+  G.pl.cr-=item.cost;
+  G.campaignState.materials=haveMat-item.matCost;
+  G.ship.craftQueue.push({id:item.id,short:item.label,progress:0,total:item.total});
+  G.notif=item.label+' В ОЧЕРЕДИ';G.notifT=120;G.notifCol=P.CYA;
+  sfxUI2();sfxPU();flash(.2,P.CYA);spPts(LW/2,LH/2,12,[P.CYA,P.WHT],.4,2,14);
+}
+
+// ============================================================
+// ЭКРАН МАСТЕРСКОЙ
+// ============================================================
+function updShipWorkshop(G){
+  // Tab/back обрабатывается в updShip (возврат на main)
+  if(mC){
+    const hits=G._shipSubHits||[];
+    for(const h of hits){
+      if(mX>=h.x&&mX<=h.x+h.w&&mY>=h.y&&mY<=h.y+h.h){
+        if(h.itemId)_queueWeapon(G,h.itemId);
+        mC=false;break;
+      }
+    }
+  }
+}
+
+function drwShipWorkshop(G){
+  ensureShipWorkers(G);
+  const t=G.shipT;
+  rc(0,0,LW,LH,'#03060d');
+  // Тонкая фоновая решётка
+  for(let y=0;y<LH;y+=8){cx.globalAlpha=0.05;rc(0,y,LW,1,P.UIT);}
+  cx.globalAlpha=1;
+  // ===== ВЕРХНИЙ ЗАГОЛОВОК =====
+  rc(0,0,LW,16,'#0a1828');
+  rc(0,15,LW,1,P.GRN);
+  // Кнопка назад (использует существующую addBtn 'back', клик уже в updShip)
+  txs('< НАЗАД',24,5,P.UIT2,P.BLK,1);
+  txcs('МАСТЕРСКАЯ',5,P.GRN,P.BLK,1);
+  // Ресурсы справа
+  const resTxt='КРЕДИТЫ: '+G.pl.cr+'  МАТЕРИАЛЫ: '+(G.campaignState.materials||0);
+  txs(resTxt,LW-gw(resTxt)-3,5,P.YEL,P.BLK,1);
+
+  // ===== ОЧЕРЕДЬ =====
+  let py=20;
+  if(G.ship.craftQueue&&G.ship.craftQueue.length>0){
+    txs('В РАБОТЕ:',6,py,P.CYA,P.BLK,1);py+=8;
+    const cq=G.ship.craftQueue[0];
+    const pct=(cq.progress/cq.total*100)|0;
+    txs(cq.short,12,py,P.WHT,P.BLK,1);
+    txs(pct+'%',LW-gw(pct+'%')-6,py,P.CYA,P.BLK,1);py+=7;
+    bar(12,py,LW-20,3,cq.progress/cq.total,P.CYA,'#001122');py+=6;
+    if(G.ship.craftQueue.length>1){
+      txs('В ОЧЕРЕДИ: '+(G.ship.craftQueue.length-1),12,py,P.DIM,P.BLK,1);py+=8;
+    }
+  } else {
+    txs('ОЧЕРЕДЬ ПУСТА',6,py,P.DIM,P.BLK,1);py+=10;
+  }
+  // Разделитель
+  rc(2,py,LW-4,1,'#1a3550');py+=4;
+  // ===== СПИСОК ДОСТУПНЫХ =====
+  txs('ДОСТУПНО:',6,py,P.UIT2,P.BLK,1);py+=10;
+  const items=_workshopItems(G);
+  const queued=new Set((G.ship.craftQueue||[]).map(c=>c.id));
+  G._shipSubHits=[];
+  const cardH=18,cardMargin=2;
+  for(const item of items){
+    const cardY=py;
+    const cardW=LW-12;
+    const cardX=6;
+    // Цвет рамки/фона по статусу
+    let frame='#1a3550', bg='#0a1828', btn='СДЕЛАТЬ', btnCol=P.GRN, btnBg='#1a3a18';
+    let nameCol=P.WHT;
+    if(item.have){frame=P.GRN;bg='#0a1f12';btn='✓ ГОТОВО';btnCol=P.GRN;btnBg='#0a2818';nameCol=P.GRN;}
+    else if(queued.has(item.id)){frame=P.CYA;bg='#0a1828';btn='В ОЧЕРЕДИ';btnCol=P.CYA;btnBg='#082030';}
+    else if(item.lock){frame='#552233';bg='#180a0e';btn='ЗАКРЫТО';btnCol='#aa6655';btnBg='#250a0e';nameCol='#aa8866';}
+    else {
+      const haveCR=G.pl.cr,haveMat=G.campaignState.materials||0;
+      if(haveCR<item.cost||haveMat<item.matCost){frame='#aa8822';bg='#1f1808';btn='МАЛО';btnCol=P.YEL;btnBg='#2a1f08';}
+    }
+    // Рамка
+    rc(cardX,cardY,cardW,cardH,frame);
+    rc(cardX+1,cardY+1,cardW-2,cardH-2,bg);
+    // Название
+    txs(item.label,cardX+4,cardY+3,nameCol,P.BLK,1);
+    // Цена
+    const priceTxt=item.cost+' КР'+(item.matCost>0?' + '+item.matCost+' МАТ':'');
+    txs(priceTxt,cardX+4,cardY+10,P.YEL,P.BLK,1);
+    // Лок-хинт справа от имени
+    if(item.lock){
+      txs(item.lockHint,cardX+cardW-gw(item.lockHint)-50,cardY+3,'#aa6655',P.BLK,1);
+    }
+    // Кнопка справа
+    const btnW=gw(btn)+8, btnX=cardX+cardW-btnW-3, btnY=cardY+4;
+    rc(btnX,btnY,btnW,10,btnBg);
+    rc(btnX,btnY,btnW,1,btnCol);
+    rc(btnX,btnY+9,btnW,1,btnCol);
+    txs(btn,btnX+4,btnY+2,btnCol,P.BLK,1);
+    // Регистрируем клик только если доступно для постановки в очередь
+    if(!item.have&&!item.lock&&!queued.has(item.id)){
+      G._shipSubHits.push({x:cardX,y:cardY,w:cardW,h:cardH,itemId:item.id});
+    }
+    py+=cardH+cardMargin;
+  }
+}
+
+// ============================================================
+// ЭКРАН РАБОЧИХ
+// ============================================================
+function updShipWorkers(G){
+  if(mC){
+    const hits=G._shipSubHits||[];
+    for(const h of hits){
+      if(mX>=h.x&&mX<=h.x+h.w&&mY>=h.y&&mY<=h.y+h.h){
+        if(h.workerAction){
+          const ok=reallocWorkers(G,h.workerRoom,h.workerAction==='plus'?+1:-1);
+          if(ok){sfxUI();fText(h.x+h.w/2,h.y+12,h.workerAction==='plus'?'+1':'-1',P.EN);}
+          else{sfxHit();fText(h.x+h.w/2,h.y+12,'НЕТ',P.RED);}
+          mC=false;break;
+        }
+      }
+    }
+  }
+}
+
+function drwShipWorkers(G){
+  ensureShipWorkers(G);
+  const t=G.shipT, w=G.ship.workers;
+  rc(0,0,LW,LH,'#03060d');
+  for(let y=0;y<LH;y+=8){cx.globalAlpha=0.05;rc(0,y,LW,1,P.UIT);}
+  cx.globalAlpha=1;
+  // ===== ВЕРХ =====
+  rc(0,0,LW,16,'#0a1828');
+  rc(0,15,LW,1,P.EN);
+  txs('< НАЗАД',24,5,P.UIT2,P.BLK,1);
+  txcs('РАСПРЕДЕЛЕНИЕ РАБОЧИХ',5,P.EN,P.BLK,1);
+  txs('ВСЕГО: '+G.pl.workers,LW-gw('ВСЕГО: '+G.pl.workers)-3,5,P.WHT,P.BLK,1);
+
+  // ===== КАРТОЧКИ ОТСЕКОВ =====
+  G._shipSubHits=[];
+  const rooms=[
+    {id:'power',name:'ЭЛЕКТРОСТАНЦИЯ',col:P.EN,
+      effect:'+'+(w.power*0.18).toFixed(2)+' ЭНЕРГИИ/КАДР'},
+    {id:'fuel',name:'ТОПЛИВО',col:P.RES,
+      effect:(w.fuel>0?'-'+(w.fuel*5)+'% РАСХОДА':'НЕТ ЭФФЕКТА')},
+    {id:'bridge',name:'МОСТИК',col:P.UIT,
+      effect:(w.bridge>0?'-'+(w.bridge*5)+'% ВХОДЯЩЕГО УРОНА':'НЕТ ЭФФЕКТА')},
+    {id:'workshop',name:'МАСТЕРСКАЯ',col:P.GRN,
+      effect:(w.workshop>0?'+'+w.workshop+' ЕД./КАДР КРАФТА':'КРАФТ ОСТАНОВЛЕН')},
+  ];
+  let py=22;
+  const cardH=28,cardMargin=4;
+  for(const rm of rooms){
+    const cardW=LW-12, cardX=6;
+    rc(cardX,py,cardW,cardH,'#1a3550');
+    rc(cardX+1,py+1,cardW-2,cardH-2,'#0a1828');
+    // Цветная полоса слева
+    rc(cardX+1,py+1,3,cardH-2,rm.col);
+    // Название
+    txs(rm.name,cardX+8,py+4,rm.col,P.BLK,1);
+    // Эффект
+    txs(rm.effect,cardX+8,py+14,P.UIT2,P.BLK,1);
+    // [-] [count] [+] справа
+    const bw=14,bh=14;
+    const minusX=cardX+cardW-bw*3-12, plusX=cardX+cardW-bw-4;
+    const cntX=minusX+bw+2, cntY=py+(cardH-bh)/2;
+    const my=py+(cardH-bh)/2;
+    // [-]
+    const minusEnabled=w[rm.id]>0;
+    rc(minusX,my,bw,bh,minusEnabled?'#3a1a1a':'#1a1010');
+    rc(minusX+1,my+1,bw-2,bh-2,minusEnabled?'#5a2a2a':'#221717');
+    txs('-',minusX+(bw-gw('-'))/2,my+(bh-5)/2-1,minusEnabled?P.RED:'#664444',1);
+    G._shipSubHits.push({x:minusX,y:my,w:bw,h:bh,workerAction:'minus',workerRoom:rm.id});
+    // Счётчик
+    const cntTxt=String(w[rm.id]);
+    txs(cntTxt,cntX+(bw-gw(cntTxt))/2,cntY+(bh-5)/2-1,P.WHT,P.BLK,1);
+    // [+]
+    const sum=w.power+w.fuel+w.bridge+w.workshop;
+    const plusEnabled=sum<G.pl.workers||true; // realloc может всегда забрать из другого
+    rc(plusX,my,bw,bh,'#1a3a1a');
+    rc(plusX+1,my+1,bw-2,bh-2,'#2a5a2a');
+    txs('+',plusX+(bw-gw('+'))/2,my+(bh-5)/2-1,P.GRN,1);
+    G._shipSubHits.push({x:plusX,y:my,w:bw,h:bh,workerAction:'plus',workerRoom:rm.id});
+    py+=cardH+cardMargin;
+  }
+  // ===== ИТОГ =====
+  py+=2;
+  txcs('+/- ПЕРЕНОСИТ РАБОЧЕГО МЕЖДУ ОТСЕКАМИ',py,P.UIT2,P.BLK,1);
+}

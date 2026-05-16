@@ -13,6 +13,8 @@ function newGame(){return{state:'menu',menuT:0,menuSt:[],pl:{x:50,y:LH/2,vx:0,vy
     // Флаги показа туториалов (один раз)
     tutSpaceShown:false,tutDroshShown:false,tutShipShown:false,
   }},ship:{fuel:70,decor:0,workers:{power:2,fuel:0,bridge:0,workshop:0},craftQueue:[]},
+  // ★ PR C: текущий экран корабля — 'main' | 'workshop' | 'workers' (сбрасывается на 'main' при входе)
+  shipUI:'main',
   // ★ Phase 5.3: ачивки + аккумулирующие счётчики
   achievements:{},
   achievementBanner:null,
