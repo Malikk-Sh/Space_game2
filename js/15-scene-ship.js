@@ -11,46 +11,46 @@ function updShip(G){
   // Туториал блокирует игровой ввод
   if(G.tutorial){updTutorial(G);return;}
   G.shipT++;if(G.notifT>0)G.notifT--;
+  // ★ Bugfix: Tab/back на sub-screen должен срабатывать ДО диспетчера, иначе диспетчер
+  //   возвращается раньше и кнопка "назад" игнорируется.
+  if((KD.Tab||btnJust('back'))&&G.shipUI&&G.shipUI!=='main'){
+    G.shipUI='main';sfxUI();return;
+  }
   // ★ PR C: если открыт sub-screen — обрабатываем его и выходим
   if(G.shipUI==='workshop'){updShipWorkshop(G);updFTX();return;}
   if(G.shipUI==='workers'){updShipWorkers(G);updFTX();return;}
   if(G.shipUI==='map'){updShipMap(G);updFTX();return;}
 
   // === ТУТОРИАЛ КОРАБЛЯ (только при первом входе) ===
+  // ★ Polish #2: переписан под новый интерфейс — отдельные экраны для мастерской/рабочих/карты.
   if(!G.campaignState.flags.tutShipShown&&G.shipT===1){
     G.campaignState.flags.tutShipShown=true;
     setTimeout(()=>{
       if(G.state!=='ship_view')return;
       const touch=USE_TOUCH_UI;
-      // Координаты ячеек: см. drwShipView. 2x2 сетка по 110x64, начиная от (4,14) с зазором 2.
-      const cellW=110, cellH=64;
-      // Power: col=0,row=0 → (4,14)+cellW/2,cellH/2 = (59,46)
-      // Fuel: col=1,row=0 → (116,14)+ → (171,46)
-      // Workshop: col=0,row=1 → (4,80)+ → (59,112)
-      // Bridge: col=1,row=1 → (116,80)+ → (171,112)
-      // Right panel: panelX = 2*(110+2)+4+4 = 232, начало
+      // Координаты ячеек 2x2 сетки (как раньше: 110x64 от (4,14) с gap=2)
+      // Power: (4,14)..(114,78) → центр (59,46)
+      // Fuel:  (116,14)..(226,78) → центр (171,46)
+      // Workshop: (4,80)..(114,144) → центр (59,112)
+      // Bridge: (116,80)..(226,144) → центр (171,112)
       startTutorial(G,[
-        {text:['ИНТЕРФЕЙС КОРАБЛЯ.','4 ОТСЕКА И ПАНЕЛЬ СТАТУСА.'],
-         tx:LW/2-90,ty:LH/2-20},
-        {text:['ЭЛЕКТРОСТАНЦИЯ:','РАБОЧИЕ ВЫРАБАТЫВАЮТ ЭНЕРГИЮ.','БОЛЬШЕ РАБОЧИХ - БЫСТРЕЕ.'],
+        {text:['ИНТЕРФЕЙС КОРАБЛЯ.','ТАП ПО ОТСЕКУ - ОТКРЫВАЕТ','ПОДРОБНЫЙ ЭКРАН.'],
+         tx:LW/2-90,ty:LH/2-22},
+        {text:['ЭЛЕКТРОСТАНЦИЯ:','ТАП - ОТКРЫТЬ ЭКРАН','РАСПРЕДЕЛЕНИЯ РАБОЧИХ.'],
          hx:59,hy:46,arrow:'left',tx:120,ty:30,hr:32},
-        {text:['ТОПЛИВО:','НАЖМИ - ОБМЕНЯЙ РЕСУРСЫ','НА ТОПЛИВО ДЛЯ ПОЛЁТОВ.'],
+        {text:['ТОПЛИВО:','ТАП - ОБМЕН РЕСУРСОВ','НА ТОПЛИВО.'],
          hx:171,hy:46,arrow:'left',tx:8,ty:30,hr:32},
-        {text:['ВЕРСТАК:','СОБИРАЕТ ОРУЖИЕ И ЩИТЫ','ИЗ НАЙДЕННЫХ ЧЕРТЕЖЕЙ.'],
+        {text:['МАСТЕРСКАЯ:','ТАП - КРАФТ ОРУЖИЯ','И АПГРЕЙДОВ КОРАБЛЯ.'],
          hx:59,hy:112,arrow:'left',tx:120,ty:90,hr:32},
-        {text:['МОСТИК:','НАВИГАЦИЯ.','ПОКАЗЫВАЕТ ТЕКУЩИЙ КУРС.'],
+        {text:['МОСТИК:','ТАП - КАРТА СИСТЕМЫ','(КОГДА ПОЛУЧИШЬ ЕЁ ОТ КЛИРРА).'],
          hx:171,hy:112,arrow:'left',tx:8,ty:90,hr:32},
-        {text:['СПРАВА - СТАТУС:','ХП, ЭН, ТОПЛ, РЕСУРСЫ,','УЛУЧШЕНИЯ.'],
-         hx:264,hy:LH/2,arrow:'right',tx:120,ty:LH/2-20,hr:30},
-        {text:touch?['КНОПКА < В ВЕРХУ - ВЫХОД.','НАЖИМАЙ НА ОТСЕК - ИНФА/ДЕЙСТВИЕ.']:['TAB - ВЫЙТИ.','КЛИКНИ ПО ОТСЕКУ - ИНФА/ДЕЙСТВИЕ.']},
+        {text:['СПРАВА - ПАНЕЛЬ СТАТУСА:','ХП, ЭНЕРГИЯ, ТОПЛИВО,','РЕСУРСЫ И УЛУЧШЕНИЯ.'],
+         hx:264,hy:LH/2,arrow:'right',tx:120,ty:LH/2-22,hr:30},
+        {text:touch?['ТАП НА < В ВЕРХУ - ВЫХОД ИЗ КОРАБЛЯ.','НА ПОДЭКРАНАХ < ВОЗВРАЩАЕТ К ОТСЕКАМ.']:['TAB - ВЫХОД ИЛИ ВОЗВРАТ НА ГЛАВНЫЙ.','КЛИК ПО ОТСЕКУ - ОТКРЫТЬ ЭКРАН.']},
       ]);
     },100);
   }
 
-  // ★ PR C: Tab/back на sub-screen — возврат к главному экрану корабля (а не выход)
-  if((KD.Tab||btnJust('back'))&&G.shipUI&&G.shipUI!=='main'){
-    G.shipUI='main';sfxUI();return;
-  }
   if(KD.Tab||btnJust('back')){sfxUI();startTrans(()=>{ALLOW_JOY=true;TAP_FIRE=false;G.state=G.shipReturnState||'planet_drosh';resetBtns();
     if(G.state==='planet_drosh'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);}
     else if(G.state==='planet_bubblika'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);addBtn('jump',LW-20,LH-48,12,'J',P.CYA);}
@@ -1283,39 +1283,63 @@ function updShipWorkshop(G){
 function drwShipWorkshop(G){
   ensureShipWorkers(G);
   const t=G.shipT;
-  rc(0,0,LW,LH,'#03060d');
-  // Тонкая фоновая решётка
-  for(let y=0;y<LH;y+=8){cx.globalAlpha=0.05;rc(0,y,LW,1,P.UIT);}
+  // ★ Polish #3: более приятный фон — тёмный градиент с тёплым уклоном (мастерская = тёплое место)
+  for(let y=0;y<LH;y++){
+    const f=y/(LH-1);
+    const r=Math.round(4+f*8),g=Math.round(8+f*4),b=Math.round(14+f*8);
+    rc(0,y,LW,1,'#'+r.toString(16).padStart(2,'0')+g.toString(16).padStart(2,'0')+b.toString(16).padStart(2,'0'));
+  }
+  // Решётка едва видна
+  for(let y=20;y<LH;y+=12){cx.globalAlpha=0.04;rc(0,y,LW,1,P.GRN);}
   cx.globalAlpha=1;
-  // ===== ВЕРХНИЙ ЗАГОЛОВОК =====
-  rc(0,0,LW,16,'#0a1828');
+  // ===== ВЕРХНИЙ ЗАГОЛОВОК с двойной рамкой =====
+  rc(0,0,LW,17,'#0a2a1a');
   rc(0,15,LW,1,P.GRN);
-  // Кнопка назад (использует существующую addBtn 'back', клик уже в updShip)
-  txs('< НАЗАД',24,5,P.UIT2,P.BLK,1);
+  rc(0,16,LW,1,'#1a5530');
+  // Лёгкая иконка молотка слева заголовка
+  cx.fillStyle=P.YEL;
+  cx.fillRect(7,4,4,2);  // головка молотка
+  cx.fillRect(8,6,2,5);  // ручка
+  cx.fillStyle='#bb7700';
+  cx.fillRect(11,4,1,2);
+  // Кнопка назад
+  txs('< НАЗАД',16,5,P.UIT2,P.BLK,1);
   txcs('МАСТЕРСКАЯ',5,P.GRN,P.BLK,1);
-  // Ресурсы справа
-  const resTxt='КРЕДИТЫ: '+G.pl.cr+'  МАТЕРИАЛЫ: '+(G.campaignState.materials||0);
-  txs(resTxt,LW-gw(resTxt)-3,5,P.YEL,P.BLK,1);
+  // Ресурсы справа в рамке
+  const crTxt='КР: '+G.pl.cr;
+  const matTxt='МАТ: '+(G.campaignState.materials||0);
+  txs(crTxt,LW-gw(crTxt)-gw(matTxt)-8,5,P.YEL,P.BLK,1);
+  txs(matTxt,LW-gw(matTxt)-3,5,P.CYA,P.BLK,1);
 
-  // ===== ОЧЕРЕДЬ =====
+  // ===== ОЧЕРЕДЬ (улучшенный вид) =====
   let py=20;
   if(G.ship.craftQueue&&G.ship.craftQueue.length>0){
-    txs('В РАБОТЕ:',6,py,P.CYA,P.BLK,1);py+=8;
     const cq=G.ship.craftQueue[0];
-    const pct=(cq.progress/cq.total*100)|0;
-    txs(cq.short,12,py,P.WHT,P.BLK,1);
-    txs(pct+'%',LW-gw(pct+'%')-6,py,P.CYA,P.BLK,1);py+=7;
-    bar(12,py,LW-20,3,cq.progress/cq.total,P.CYA,'#001122');py+=6;
+    const pct=cq.progress/cq.total;
+    const pctInt=(pct*100)|0;
+    // Карточка прогресса с цветной полосой
+    rc(4,py,LW-8,18,'#0a3018');
+    rc(5,py+1,LW-10,16,'#031810');
+    rc(5,py+1,2,16,P.CYA);
+    txs('В РАБОТЕ',9,py+2,P.CYA,P.BLK,1);
+    txs(cq.short,9,py+10,P.WHT,P.BLK,1);
+    txs(pctInt+'%',LW-gw(pctInt+'%')-9,py+2,P.CYA,P.BLK,1);
+    bar(LW-72,py+10,60,4,pct,P.CYA,'#001122');
+    py+=22;
     if(G.ship.craftQueue.length>1){
-      txs('В ОЧЕРЕДИ: '+(G.ship.craftQueue.length-1),12,py,P.DIM,P.BLK,1);py+=8;
+      txs('+ '+(G.ship.craftQueue.length-1)+' В ОЧЕРЕДИ',6,py,P.DIM,P.BLK,1);py+=8;
     }
   } else {
-    txs('ОЧЕРЕДЬ ПУСТА',6,py,P.DIM,P.BLK,1);py+=10;
+    cx.globalAlpha=.5;
+    txs('ОЧЕРЕДЬ ПУСТА',6,py,P.DIM,P.BLK,1);
+    cx.globalAlpha=1;py+=10;
   }
-  // Разделитель
-  rc(2,py,LW-4,1,'#1a3550');py+=4;
+  // Разделитель — с подсветкой по концам
+  rc(2,py,LW-4,1,'#1a5530');
+  cx.fillStyle=P.GRN;cx.fillRect(2,py,1,1);cx.fillRect(LW-3,py,1,1);
+  py+=4;
   // ===== СПИСОК ДОСТУПНЫХ =====
-  txs('ДОСТУПНО:',6,py,P.UIT2,P.BLK,1);py+=10;
+  txs('ОРУЖИЕ:',6,py,P.UIT2,P.BLK,1);py+=10;
   const items=_workshopItems(G);
   const queued=new Set((G.ship.craftQueue||[]).map(c=>c.id));
   G._shipSubHits=[];
@@ -1334,20 +1358,30 @@ function drwShipWorkshop(G){
       const haveCR=G.pl.cr,haveMat=G.campaignState.materials||0;
       if(haveCR<item.cost||haveMat<item.matCost){frame='#aa8822';bg='#1f1808';btn='МАЛО';btnCol=P.YEL;btnBg='#2a1f08';}
     }
-    // Рамка
+    // Рамка с глубиной (двойной обвод)
     rc(cardX,cardY,cardW,cardH,frame);
     rc(cardX+1,cardY+1,cardW-2,cardH-2,bg);
+    // Цветной акцент-полоса слева (3px) — даёт визуальный якорь для статуса
+    rc(cardX+1,cardY+1,3,cardH-2,frame);
+    // ★ Polish #3: мини-иконка-маркёр оружия (ромбик/квадратик в зависимости от типа)
+    const ix=cardX+8,iy=cardY+(cardH/2|0)-2;
+    cx.fillStyle=nameCol===P.WHT?frame:nameCol;
+    cx.fillRect(ix,iy,1,3);cx.fillRect(ix+1,iy-1,1,5);cx.fillRect(ix+2,iy-2,1,7);cx.fillRect(ix+3,iy-1,1,5);cx.fillRect(ix+4,iy,1,3);
     // Название
-    txs(item.label,cardX+4,cardY+3,nameCol,P.BLK,1);
+    txs(item.label,cardX+15,cardY+3,nameCol,P.BLK,1);
     // Цена
     const priceTxt=item.cost+' КР'+(item.matCost>0?' + '+item.matCost+' МАТ':'');
-    txs(priceTxt,cardX+4,cardY+10,P.YEL,P.BLK,1);
-    // Лок-хинт справа от имени
+    txs(priceTxt,cardX+15,cardY+10,P.YEL,P.BLK,1);
+    // Лок-хинт под названием (не справа — там кнопка)
     if(item.lock){
-      txs(item.lockHint,cardX+cardW-gw(item.lockHint)-50,cardY+3,'#aa6655',P.BLK,1);
+      txs(item.lockHint,cardX+15,cardY+10,'#aa6655',P.BLK,1);
     }
-    // Кнопка справа
+    // Кнопка справа — с подсветкой при hover (cursor)
     const btnW=gw(btn)+8, btnX=cardX+cardW-btnW-3, btnY=cardY+4;
+    const hover=!USE_TOUCH_UI&&mX>=cardX&&mX<=cardX+cardW&&mY>=cardY&&mY<=cardY+cardH;
+    if(hover&&!item.have&&!item.lock&&!queued.has(item.id)){
+      cx.globalAlpha=.4;rc(cardX+1,cardY+1,cardW-2,cardH-2,frame);cx.globalAlpha=1;
+    }
     rc(btnX,btnY,btnW,10,btnBg);
     rc(btnX,btnY,btnW,1,btnCol);
     rc(btnX,btnY+9,btnW,1,btnCol);
@@ -1530,10 +1564,40 @@ function updShipMap(G){
 
 function drwShipMap(G){
   const t=G.shipT;
-  rc(0,0,LW,LH,'#020412');
-  // Фоновая решётка координат
-  for(let y=0;y<LH;y+=10){cx.globalAlpha=0.06;rc(0,y,LW,1,P.UIT);}
-  for(let x=0;x<LW;x+=10){cx.globalAlpha=0.06;rc(x,0,1,LH,P.UIT);}
+  // ★ Polish #4: фон карты — космос (тёмный градиент + звёздное поле + туманности)
+  // Вертикальный градиент с лёгким фиолетовым уклоном
+  for(let y=0;y<LH;y++){
+    const f=y/(LH-1);
+    const r=Math.round(2+f*8), g=Math.round(4+f*6), b=Math.round(18+f*22);
+    rc(0,y,LW,1,'#'+r.toString(16).padStart(2,'0')+g.toString(16).padStart(2,'0')+b.toString(16).padStart(2,'0'));
+  }
+  // Сохранённые статичные звёзды (PRNG по индексу — стабильно между кадрами)
+  for(let i=0;i<70;i++){
+    const sx=(i*97+i*i*13)%LW;
+    const sy=(i*53+i*i*7)%LH;
+    const layer=i%4;
+    const bright=layer===3?(0.7+0.3*Math.sin(t*.05+i)):(0.25+layer*0.15);
+    cx.globalAlpha=bright;
+    cx.fillStyle=layer===3?P.WHT:layer===2?P.S2:P.S3;
+    cx.fillRect(sx|0,sy|0,1,1);
+  }
+  // Лёгкие туманности (3 пятна)
+  for(let i=0;i<3;i++){
+    const nx=80+i*100, ny=40+i*40;
+    const col=['#2a0a4a','#0a1a4a','#3a0a2a'][i];
+    for(let r=14;r>2;r-=2){
+      const al=0.10*(1-(14-r)/14);
+      cx.globalAlpha=al;cx.fillStyle=col;
+      for(let dy=-r;dy<=r;dy++){
+        const w=Math.sqrt(1-(dy/r)*(dy/r))*r|0;
+        cx.fillRect((nx-w)|0,(ny+dy)|0,w*2,1);
+      }
+    }
+  }
+  cx.globalAlpha=1;
+  // Решётка координат поверх звёздного фона — едва заметная
+  for(let y=0;y<LH;y+=20){cx.globalAlpha=0.04;rc(0,y,LW,1,P.UIT);}
+  for(let x=0;x<LW;x+=20){cx.globalAlpha=0.04;rc(x,0,1,LH,P.UIT);}
   cx.globalAlpha=1;
   // ===== ВЕРХНИЙ ЗАГОЛОВОК =====
   rc(0,0,LW,16,'#0a1828');

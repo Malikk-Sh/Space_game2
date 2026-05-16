@@ -154,18 +154,20 @@ function drwQuestReward(G){
     }
     const age=Math.min(14,t-revT);
     const fa=Math.min(1,age/8);
-    const ox=(8-age)*2;  // выезжает слева
+    // ★ Bugfix #5: клампим >= 0 (раньше при age>8 шло в минус и иконка уезжала за левую границу).
+    //   Также увеличен базовый отступ от рамки: иконка с BX+10 → BX+14, текст с BX+20 → BX+24.
+    const ox=Math.max(0,(8-age)*2);
     const ry=BY+13+RPAD/2+i*11;
     cx.globalAlpha=fa;
     // Маленький ромб-иконка
     cx.fillStyle=r.col;
-    cx.fillRect((BX+10+ox)|0,ry+2,1,5);
-    cx.fillRect((BX+11+ox)|0,ry+1,1,7);
-    cx.fillRect((BX+12+ox)|0,ry,1,9);  // пик
-    cx.fillRect((BX+13+ox)|0,ry+1,1,7);
     cx.fillRect((BX+14+ox)|0,ry+2,1,5);
+    cx.fillRect((BX+15+ox)|0,ry+1,1,7);
+    cx.fillRect((BX+16+ox)|0,ry,1,9);  // пик
+    cx.fillRect((BX+17+ox)|0,ry+1,1,7);
+    cx.fillRect((BX+18+ox)|0,ry+2,1,5);
     // Метка награды
-    txs(r.label,(BX+20+ox)|0,ry+1,r.col,'#000d1c',1);
+    txs(r.label,(BX+24+ox)|0,ry+1,r.col,'#000d1c',1);
     // Тонкая разделительная линия под строкой
     if(i<N-1){cx.fillStyle='#0a1e30';cx.fillRect(BX+8,ry+10,BW-16,1);}
     cx.globalAlpha=1;
