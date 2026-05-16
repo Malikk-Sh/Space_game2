@@ -143,12 +143,14 @@ function spwnAst(G){const sizes=[4,6,9],s=sizes[(Math.random()*3)|0];const y=s+4
 function spwnPirate(G){const y=30+Math.random()*(LH-60);G.enms.push({type:'pirate',x:LW+12,y,vx:-1.1-Math.random()*.6,vy:0,t:0,hp:6,maxHp:6,shootCD:60+Math.random()*60,flash:0});}
 
 // ★ Танк — медленный, тяжёлый, крупные снаряды. Появляется при prog > 0.4.
+//   Balance #7: HP 60 → 36 (−40%). Balance #1: дроп материала 35%.
 function spwnTank(G){
   const y=40+Math.random()*(LH-80);
-  G.enms.push({type:'tank',x:LW+14,y,vx:-0.4,vy:0,t:0,hp:60,maxHp:60,shootCD:60+Math.random()*30,flash:0});
+  G.enms.push({type:'tank',x:LW+14,y,vx:-0.4,vy:0,t:0,hp:36,maxHp:36,shootCD:60+Math.random()*30,flash:0});
 }
 
 // ★ Рой дронов-камикадзе — 3-5 штук, преследуют игрока, гибнут на таран.
+//   Balance #7: HP оставлен (4 — и так минимум).
 function spwnDroneSwarm(G){
   const n=3+Math.floor(Math.random()*3);
   const baseY=40+Math.random()*(LH-80);
@@ -165,15 +167,17 @@ function spwnDroneSwarm(G){
 }
 
 // ★ Снайпер — почти неподвижен. Заряжает выстрел 60 кадров (видимый луч), затем мгновенный высокоурон снаряд.
+//   Balance #7: HP 25 → 16 (−36%). Balance #1: дроп материала 25%.
 function spwnSniper(G){
   const y=40+Math.random()*(LH-80);
-  G.enms.push({type:'sniper',x:LW+10,y,vx:-0.1,vy:0,t:0,hp:25,maxHp:25,chargeT:0,targetY:y,flash:0});
+  G.enms.push({type:'sniper',x:LW+10,y,vx:-0.1,vy:0,t:0,hp:16,maxHp:16,chargeT:0,targetY:y,flash:0});
 }
 
 // ★ Мини-босс — кульминация полёта. 2 фазы (стрельба → таран при HP<50%). Один за полёт.
+//   Balance #7: HP 150 → 95 (−37%). Balance #1: дроп +2 материала (было 1).
 function spwnMiniboss(G){
   const y=LH/2+(Math.random()-.5)*30;
-  G.enms.push({type:'miniboss',x:LW+18,y,vx:-0.5,vy:0,t:0,hp:150,maxHp:150,shootCD:90,phase:'shoot',_raged:false,flash:0});
+  G.enms.push({type:'miniboss',x:LW+18,y,vx:-0.5,vy:0,t:0,hp:95,maxHp:95,shootCD:90,phase:'shoot',_raged:false,flash:0});
 }
 
 // ★ Взвешенный диспетчер спавна — выбирает тип врага по G.prog.
@@ -507,6 +511,11 @@ function updSpace(G){
               crGain=30;resGain=2;
               partCols=[P.PIR3,P.RED,P.YEL,P.WHT];partN=22;partSp=3.5;
               shakeAmp=4;shockR=22;sfxScale=1.2;
+              // ★ Balance #1: танк даёт материал с шансом 35% — материалы стали реже встречаться чем хотелось.
+              if(Math.random()<0.35){
+                G.campaignState.materials=(G.campaignState.materials||0)+1;
+                fText(e.x,e.y-16,'+МАТЕРИАЛ',P.CYA);
+              }
             } else if(_t==='drone'){
               crGain=5;resGain=1;
               partCols=[P.L1,P.L1L,P.WHT];partN=8;partSp=2;
@@ -516,14 +525,19 @@ function updSpace(G){
               partCols=[P.PUR,P.RED,P.YEL,P.WHT];partN=14;partSp=2.5;
               shakeAmp=3;shockR=16;sfxScale=.8;
               G._sniperAlive=false;
+              // ★ Balance #1: снайпер даёт материал с шансом 25%
+              if(Math.random()<0.25){
+                G.campaignState.materials=(G.campaignState.materials||0)+1;
+                fText(e.x,e.y-16,'+МАТЕРИАЛ',P.CYA);
+              }
             } else if(_t==='miniboss'){
               crGain=80;resGain=5;
               partCols=[P.PIR3,P.YEL,P.WHT,P.RED,P.ORA];partN=40;partSp=5;
               shakeAmp=10;shockR=36;sfxScale=1.8;
               flash(.6,P.YEL);hitStopAdd(8);
-              // Материал апгрейда добавляется в campaignState
-              G.campaignState.materials=(G.campaignState.materials||0)+1;
-              fText(e.x,e.y-16,'+МАТЕРИАЛ',P.CYA);
+              // ★ Balance #1: мини-босс даёт +2 материала (было +1) — гарантированный источник
+              G.campaignState.materials=(G.campaignState.materials||0)+2;
+              fText(e.x,e.y-16,'+2 МАТЕРИАЛА',P.CYA);
             } else {
               // пират — оригинальные параметры (без изменений)
               crGain=20;powerupChance=.5;

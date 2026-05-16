@@ -299,10 +299,11 @@ function drwShipView(G){
   const _workshopItems=[
     {unbuilt:inv.laserBlueprint&&!inv.laserStrong, label:'Л2',     short:'Л2',     cost:90,  matCost:0, id:'l2'},
     {unbuilt:inv.bubblikaContract&&!inv.shieldBuilt, label:'ЩИТ',  short:'ЩИТ',    cost:60,  matCost:0, id:'shield'},
-    {unbuilt:!inv.spreadUnlocked,  label:'СПРЕД',  short:'СПРЕД',  cost:50,  matCost:1, id:'spread'},
-    {unbuilt:!inv.missileUnlocked, label:'РАКЕТА', short:'РАКЕТА', cost:80,  matCost:2, id:'missile'},
-    {unbuilt:!inv.beamUnlocked,    label:'ЛУЧ',    short:'ЛУЧ',    cost:120, matCost:2, id:'beam'},
-    {unbuilt:!inv.burstUnlocked,   label:'БЁРСТ',  short:'БЁРСТ',  cost:150, matCost:3, id:'burst'},
+    // ★ Balance #9: цены оружий снижены — слишком долго копились
+    {unbuilt:!inv.spreadUnlocked,  label:'СПРЕД',  short:'СПРЕД',  cost:30,  matCost:0, id:'spread'},
+    {unbuilt:!inv.missileUnlocked, label:'РАКЕТА', short:'РАКЕТА', cost:50,  matCost:1, id:'missile'},
+    {unbuilt:!inv.beamUnlocked,    label:'ЛУЧ',    short:'ЛУЧ',    cost:80,  matCost:1, id:'beam'},
+    {unbuilt:!inv.burstUnlocked,   label:'БЁРСТ',  short:'БЁРСТ',  cost:100, matCost:2, id:'burst'},
   ];
   const _workshopNext=_workshopItems.find(i=>i.unbuilt&&!_queuedIds.has(i.id));
   let workshopHint='';
@@ -357,10 +358,11 @@ function drwShipView(G){
        const items=[
          {unbuilt:inv2.laserBlueprint&&!inv2.laserStrong, label:'ЛАЗЕР L2', short:'Л2', cost:90, matCost:0, id:'l2', total:480},
          {unbuilt:inv2.bubblikaContract&&!inv2.shieldBuilt, label:'ЩИТ', short:'ЩИТ', cost:60, matCost:0, id:'shield', total:360},
-         {unbuilt:!inv2.spreadUnlocked,  label:'СПРЕД',  short:'СПРЕД',  cost:50,  matCost:1, id:'spread',  total:300},
-         {unbuilt:!inv2.missileUnlocked, label:'РАКЕТА', short:'РАКЕТА', cost:80,  matCost:2, id:'missile', total:600},
-         {unbuilt:!inv2.beamUnlocked,    label:'ЛУЧ',    short:'ЛУЧ',    cost:120, matCost:2, id:'beam',    total:840},
-         {unbuilt:!inv2.burstUnlocked,   label:'БЁРСТ',  short:'БЁРСТ',  cost:150, matCost:3, id:'burst',   total:960},
+         // ★ Balance #9: цены снижены (синхронизировано с hint-таблицей)
+         {unbuilt:!inv2.spreadUnlocked,  label:'СПРЕД',  short:'СПРЕД',  cost:30,  matCost:0, id:'spread',  total:300},
+         {unbuilt:!inv2.missileUnlocked, label:'РАКЕТА', short:'РАКЕТА', cost:50,  matCost:1, id:'missile', total:600},
+         {unbuilt:!inv2.beamUnlocked,    label:'ЛУЧ',    short:'ЛУЧ',    cost:80,  matCost:1, id:'beam',    total:840},
+         {unbuilt:!inv2.burstUnlocked,   label:'БЁРСТ',  short:'БЁРСТ',  cost:100, matCost:2, id:'burst',   total:960},
        ].filter(i=>!queued.has(i.id));
        const next=items.find(i=>i.unbuilt);
        if(!next){
