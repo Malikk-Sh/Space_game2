@@ -1203,6 +1203,64 @@ function _queueWeapon(G,itemId){
 // ============================================================
 // ЭКРАН МАСТЕРСКОЙ
 // ============================================================
+// ★ PR D: Постоянные апгрейды корабля (sink для накопленных КР/РЕС в конце игры).
+//   Каждый апгрейд имеет несколько уровней с растущей ценой. Эффект применяется при покупке.
+function _upgradeItems(G){
+  const u=(G.campaignState.upgrades||{hp:0,en:0,workers:0});
+  // Каждый элемент = ОДИН следующий уровень (если есть). costs/effects индексируются от 0.
+  const hpDefs   =[{cr:60, res:4, eff:'+20 МАКСИМАЛЬНОГО ХП'},
+                   {cr:100,res:6, eff:'+20 МАКСИМАЛЬНОГО ХП'},
+                   {cr:150,res:10,eff:'+20 МАКСИМАЛЬНОГО ХП'}];
+  const enDefs   =[{cr:50, res:3, eff:'+25 МАКСИМАЛЬНОЙ ЭНЕРГИИ'},
+                   {cr:90, res:5, eff:'+25 МАКСИМАЛЬНОЙ ЭНЕРГИИ'},
+                   {cr:140,res:8, eff:'+25 МАКСИМАЛЬНОЙ ЭНЕРГИИ'}];
+  const workerDefs=[{cr:100,res:8, eff:'+1 РАБОЧИЙ'},
+                    {cr:200,res:15,eff:'+1 РАБОЧИЙ'}];
+  const out=[];
+  if(u.hp<hpDefs.length){
+    const d=hpDefs[u.hp];
+    out.push({id:'hp',label:'УЛУЧШЕНИЕ КОРПУСА',lvl:u.hp+1,maxLvl:hpDefs.length,cost:d.cr,res:d.res,effect:d.eff,col:P.HP});
+  }
+  if(u.en<enDefs.length){
+    const d=enDefs[u.en];
+    out.push({id:'en',label:'ЭНЕРГОБЛОК',lvl:u.en+1,maxLvl:enDefs.length,cost:d.cr,res:d.res,effect:d.eff,col:P.EN});
+  }
+  if(u.workers<workerDefs.length){
+    const d=workerDefs[u.workers];
+    out.push({id:'workers',label:'НАЁМ РАБОЧЕГО',lvl:u.workers+1,maxLvl:workerDefs.length,cost:d.cr,res:d.res,effect:d.eff,col:P.CYA});
+  }
+  return out;
+}
+
+function _buyUpgrade(G,upgradeId){
+  const item=_upgradeItems(G).find(i=>i.id===upgradeId);
+  if(!item){G.notif='УЖЕ МАКСИМАЛЬНЫЙ УРОВЕНЬ';G.notifT=80;G.notifCol=P.YEL;sfxHit();return;}
+  if(G.pl.cr<item.cost){G.notif='МАЛО КРЕДИТОВ ('+item.cost+')';G.notifT=90;G.notifCol=P.RED;sfxHit();return;}
+  if(G.pl.res<item.res){G.notif='МАЛО РЕСУРСОВ ('+item.res+')';G.notifT=90;G.notifCol=P.RED;sfxHit();return;}
+  // Списываем
+  G.pl.cr-=item.cost;
+  G.pl.res-=item.res;
+  if(!G.campaignState.upgrades)G.campaignState.upgrades={hp:0,en:0,workers:0};
+  // Применяем эффект
+  if(upgradeId==='hp'){
+    G.pl.mhp+=20;
+    G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+20);
+    G.campaignState.upgrades.hp++;
+  } else if(upgradeId==='en'){
+    G.pl.men+=25;
+    G.pl.en=Math.min(G.pl.men,G.pl.en+25);
+    G.campaignState.upgrades.en++;
+  } else if(upgradeId==='workers'){
+    G.pl.workers++;
+    ensureShipWorkers(G);G.ship.workers.power++;
+    G.campaignState.upgrades.workers++;
+  }
+  G.notif=item.label+' КУПЛЕНО!';G.notifT=130;G.notifCol=item.col;
+  sfxPU();setTimeout(sfxPU,80);
+  flash(.25,item.col);
+  spPts(LW/2,LH/2,16,[item.col,P.WHT,P.YEL],.5,2.5,18);
+}
+
 function updShipWorkshop(G){
   // Tab/back обрабатывается в updShip (возврат на main)
   if(mC){
@@ -1210,6 +1268,7 @@ function updShipWorkshop(G){
     for(const h of hits){
       if(mX>=h.x&&mX<=h.x+h.w&&mY>=h.y&&mY<=h.y+h.h){
         if(h.itemId)_queueWeapon(G,h.itemId);
+        else if(h.upgradeId)_buyUpgrade(G,h.upgradeId);
         mC=false;break;
       }
     }
@@ -1293,6 +1352,43 @@ function drwShipWorkshop(G){
       G._shipSubHits.push({x:cardX,y:cardY,w:cardW,h:cardH,itemId:item.id});
     }
     py+=cardH+cardMargin;
+  }
+  // ★ PR D: секция АПГРЕЙДОВ — постоянные улучшения за КР+РЕС
+  const upgrades=_upgradeItems(G);
+  if(upgrades.length>0||(G.campaignState.upgrades&&(G.campaignState.upgrades.hp>0||G.campaignState.upgrades.en>0||G.campaignState.upgrades.workers>0))){
+    py+=4;
+    rc(2,py-1,LW-4,1,'#552288');py+=4;
+    txs('АПГРЕЙДЫ КОРАБЛЯ (РЕСУРСЫ: '+G.pl.res+'):',6,py,P.PUR,P.BLK,1);py+=10;
+    for(const up of upgrades){
+      const cardY=py;
+      const cardW=LW-12, cardX=6;
+      const haveCR=G.pl.cr, haveRES=G.pl.res;
+      const affordable=haveCR>=up.cost&&haveRES>=up.res;
+      const frame=affordable?up.col:'#aa8822', bg='#0a1828';
+      const btn=affordable?'КУПИТЬ':'МАЛО', btnCol=affordable?up.col:P.YEL, btnBg=affordable?'#1a1830':'#2a1f08';
+      // Рамка + фон + цветная полоса
+      rc(cardX,cardY,cardW,cardH,frame);
+      rc(cardX+1,cardY+1,cardW-2,cardH-2,bg);
+      rc(cardX+1,cardY+1,3,cardH-2,up.col);
+      // Название с уровнем
+      txs(up.label+' ['+up.lvl+'/'+up.maxLvl+']',cardX+7,cardY+3,affordable?P.WHT:'#aa8866',P.BLK,1);
+      // Эффект слева
+      txs(up.effect,cardX+7,cardY+10,up.col,P.BLK,1);
+      // Кнопка справа
+      const btnW=gw(btn)+8, btnX=cardX+cardW-btnW-3, btnY=cardY+4;
+      rc(btnX,btnY,btnW,10,btnBg);
+      rc(btnX,btnY,btnW,1,btnCol);
+      rc(btnX,btnY+9,btnW,1,btnCol);
+      txs(btn,btnX+4,btnY+2,btnCol,P.BLK,1);
+      // Цена под кнопкой (или над, чтобы не пересекалась с эффектом)
+      const priceTxt=up.cost+'КР+'+up.res+'РЕС';
+      const priceW=gw(priceTxt);
+      txs(priceTxt,btnX+btnW-priceW,cardY+15,affordable?P.YEL:'#aa6655',P.BLK,1);
+      if(affordable){
+        G._shipSubHits.push({x:cardX,y:cardY,w:cardW,h:cardH,upgradeId:up.id});
+      }
+      py+=cardH+cardMargin;
+    }
   }
 }
 
