@@ -12,12 +12,13 @@
 // Игрок может пропустить (ENTER/ТАП) после показа подсказки.
 function initIntro(G){
   TAP_FIRE=false;ALLOW_JOY=false;G.state='intro';
-  // Длительности сцен (60Гц). ★ Phase 3.4: интро сокращено с ~3 мин до ~48 сек.
-  // Раньше: [160,310,210,270,370,270,270,230,270,270,250,1510,230] (~3 мин)
-  // Теперь: [300,120,120,180,280,150,220,100,200,150,180,700,200] (~48 сек) согласно ROADMAP
+  // Длительности сцен (60Гц).
+  // ★ Balance #10: интро удлинено обратно ~×1.5 (было слишком быстро для нарратива).
+  //   Phase 3.4 = [300,120,120,180,280,150,220,100,200,150,180,700,200] (~48 сек)
+  //   Сейчас  = [300,180,180,270,420,225,330,150,300,225,270,1050,300]  (~72 сек)
   // [titlecard, peace, warning, pirates, sphere_build, tina_done, frozen_planets,
   //  time_skip, ship_arrives, detect_alien, pickup, cockpit_dialog, mission_map]
-  const dur=[300,120,120,180,280,150,220,100,200,150,180,700,200];
+  const dur=[300,180,180,270,420,225,330,150,300,225,270,1050,300];
   G.intro={
     sceneIdx:0,sceneT:0,totalT:0,
     skipShown:false,
@@ -397,8 +398,9 @@ function updIntro(G){
       ['РАЙГАР:','ТЫ - НАША ПОСЛЕДНЯЯ НАДЕЖДА.'],             // 11
       ['ПИЛОТ:','...ПРИНЯТО. КУРС НА ТИНУ.'],                 // 12
     ];
-    // ★ Phase 3.4: ускорение диалога кокпита — общая длительность сократилась с 1510 до 700 кадров
-    const stepLen=54;   // раньше 110 — каждая реплика держится короче
+    // ★ Phase 3.4 + Balance #10: ускорение диалога кокпита (общая длительность 1050 кадров).
+    //   stepLen синхронизирован с длительностью сцены 11: 1050 / 13 ≈ 81 кадр на реплику.
+    const stepLen=81;
     const newStep=Math.min(lines.length-1,Math.floor(I.dialogT/stepLen));
     if(newStep!==I.dialogStep){
       I.dialogStep=newStep;I.dialogChar=0;
@@ -585,12 +587,7 @@ function drwIntro(G){
   // ===== СЦЕНА 4: ПОСТРОЕНИЕ СФЕРЫ =====
   else if(s===4){
     drwStars();drwPts();
-    // ★ Phase 3.4: zoom-in на сборку сферы — от 0.5x до 1.5x за длительность сцены
-    const _z=0.5+(t/I.durations[4])*1.0;
-    cx.save();
-    cx.translate(I.starX,I.starY);
-    cx.scale(_z,_z);
-    cx.translate(-I.starX,-I.starY);
+    // ★ Balance #10: zoom-in убран — он мешал восприятию сборки сферы
     drwCutsceneStar(I.starX,I.starY,16,I.starBright,T,I.starBright>0.5);
     // Куски сферы летят к звезде
     for(const sp of I.spherePieces){
@@ -615,7 +612,6 @@ function drwIntro(G){
       rc(2,-2,1,1,'#ffaa44');
       cx.restore();
     }
-    cx.restore();  // конец zoom-трансформа
     // Текст — поэтапно (рисуется в screen-space, не масштабируется)
     if(t>50){
       const a=Math.min(1,(t-50)/45);cx.globalAlpha=a;
