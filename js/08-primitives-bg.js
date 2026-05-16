@@ -100,7 +100,8 @@ function showQuestReward(G,title,rewards,col){
 function drwQuestReward(G){
   const q=G.qrw;if(!q||!q.active)return;
   const t=q.t,N=q.rewards.length;
-  const BW=170,RPAD=14,BH=RPAD+11+N*11+RPAD;
+  // ★ Bugfix #12: BW 170 → 260 — длинные строки наград (название оружия + комментарий) не помещались
+  const BW=260,RPAD=14,BH=RPAD+11+N*11+RPAD;
   const BX=(LW-BW)/2|0;
   // Slide-in ease-out cubic
   const slideP=Math.min(1,Math.max(0,(t-1)/15));

@@ -51,7 +51,9 @@ function updTinaBattle(G){
       }else if(pT.toPhase===4){
         // ★ Phase 2.3: вход в фазу 4 — добавляем 3-ю брешь (если нет), включаем rage
         if(T.weakSpots.length<3)addTinaWeakSpot(T);
-        for(const ws of T.weakSpots)ws.orbitSpd=0.013;
+        // ★ Bugfix #5: в фазе ярости бреши были невидимы из-за быстрого вращения и малой ширины.
+        //   Расширяем arcWidth с 0.18 до 0.26 (~15 град) — попадает в окно проще, видно лучше.
+        for(const ws of T.weakSpots){ws.orbitSpd=0.013;ws.arcWidth=0.26;}
         T.subphase='4';
         T.droneCD=Math.min(T.droneCD,80);
         T.shootCD=Math.min(T.shootCD,40);
