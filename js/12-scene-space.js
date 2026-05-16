@@ -226,6 +226,7 @@ function updSpace(G){
     startTrans(()=>{
       G.shipReturnState='space';
       G.state='ship_view';
+      G.shipUI='main';   // ★ PR C: всегда возвращаемся на главный экран корабля
       G.shipT=0;
       TAP_FIRE=false;
       resetBtns();
