@@ -224,6 +224,8 @@ function updPlanetDrosh(G){
       // Победа
       G.droshSide.done=true;G.droshDone=true;G.campaignState.flags.droshSideDone=true;G.pl.cr+=120;G.ship.fuel=Math.min(100,G.ship.fuel+30);
       G.pl.mhp+=40;G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+40);
+      // ★ PR E: Клирр даёт системную карту в награду — открывается через Мостик корабля
+      G.campaignState.inventory.starMap=true;
       // ★ Phase 5.3: спаситель Дроша + мастер маяков (если ни один не погас от метели)
       unlockAchievement(G,'droshSave');
       if((G._aBeaconsLost||0)===0)unlockAchievement(G,'beaconMaster');

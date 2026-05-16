@@ -14,6 +14,7 @@ function updShip(G){
   // ★ PR C: если открыт sub-screen — обрабатываем его и выходим
   if(G.shipUI==='workshop'){updShipWorkshop(G);updFTX();return;}
   if(G.shipUI==='workers'){updShipWorkers(G);updFTX();return;}
+  if(G.shipUI==='map'){updShipMap(G);updFTX();return;}
 
   // === ТУТОРИАЛ КОРАБЛЯ (только при первом входе) ===
   if(!G.campaignState.flags.tutShipShown&&G.shipT===1){
@@ -267,9 +268,10 @@ function drwRoomWorkstation(G,x,y){
 }
 
 function drwShipView(G){
-  // ★ PR C: диспетчер sub-screens — мастерская и распределение рабочих
+  // ★ PR C / PR E: диспетчер sub-screens — мастерская, рабочие, системная карта
   if(G.shipUI==='workshop'){drwShipWorkshop(G);return;}
   if(G.shipUI==='workers'){drwShipWorkers(G);return;}
+  if(G.shipUI==='map'){drwShipMap(G);return;}
   // ===== ВЕРХНЯЯ ПАНЕЛЬ =====
   rc(0,0,LW,LH,'#020610');
   // Тонкая решётка фона - имитация интерфейса
@@ -356,10 +358,13 @@ function drwShipView(G){
      action:(G)=>{G.shipUI='workshop';sfxUI2();},
      notif:'СОЗДАНИЕ И ОЧЕРЕДЬ КРАФТА. ПРОГРЕСС ИДЁТ В ПОЛЁТЕ.'},
     {col:1,row:1,id:'bridge',name:'МОСТИК',col2:P.UIT,
-     // ★ PR C: чистый указатель курса
-     hint:'КУРС: '+((PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh).name),
-     status:'info',
-     action:null, notif:'НАВИГАЦИЯ И КУРС КОРАБЛЯ.'},
+     // ★ PR C / PR E: курс + клик открывает системную карту (если Клирр выдал)
+     hint:inv.starMap
+       ? 'КУРС: '+((PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh).name)+'   КАРТА →'
+       : 'КУРС: '+((PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh).name),
+     status:inv.starMap?'ready':'info',
+     action:inv.starMap?(G)=>{G.shipUI='map';sfxUI2();}:null,
+     notif:inv.starMap?'СИСТЕМНАЯ КАРТА — ВЫБОР МАРШРУТА.':'НАВИГАЦИЯ И КУРС КОРАБЛЯ.'},
   ];
 
   // Готовим список зон клика для updShip (сбрасываем каждый кадр)
@@ -1474,4 +1479,161 @@ function drwShipWorkers(G){
   // ===== ИТОГ =====
   py+=2;
   txcs('+/- ПЕРЕНОСИТ РАБОЧЕГО МЕЖДУ ОТСЕКАМИ',py,P.UIT2,P.BLK,1);
+}
+
+// ============================================================
+// ★ PR E: СИСТЕМНАЯ КАРТА (даётся Клирром после квеста Дроша)
+//   Полноэкранный обзор системы: центр Тины + орбиты планет + текущая цель.
+//   Клик по разблокированной планете → переключение целевой планеты.
+// ============================================================
+
+// Координаты планет на карте (статичные позиции для согласованности).
+//   centerX/centerY вычисляются от LW/LH в drwShipMap.
+const _MAP_PLANETS=[
+  {id:'drosh',     name:'ДРОШ',      angle:Math.PI*1.1, r:32, col:P.PL1,  body:P.IC3},
+  {id:'bubblika',  name:'БУББЛИКА',  angle:Math.PI*1.7, r:48, col:P.BUB1, body:P.BUB3},
+  {id:'krasnozem', name:'КРАСНОЗЁМ', angle:Math.PI*0.4, r:62, col:P.KRZ1, body:P.KRZ3},
+  {id:'center',    name:'ТИНА',      angle:0,            r:0,  col:P.TINA, body:P.TINA_CORE},
+];
+
+function _mapIsUnlocked(G,planetId){
+  // Игрок может выбрать любую посещённую планету ИЛИ следующую по очереди
+  if(planetId==='drosh')return true;
+  if(planetId==='bubblika')return !!G.droshDone;
+  if(planetId==='krasnozem')return !!G.bubblikaDone;
+  if(planetId==='center')return !!G.krasDone;
+  return false;
+}
+
+function updShipMap(G){
+  if(mC){
+    const hits=G._shipSubHits||[];
+    for(const h of hits){
+      if(mX>=h.x&&mX<=h.x+h.w&&mY>=h.y&&mY<=h.y+h.h){
+        if(h.mapPlanet){
+          if(_mapIsUnlocked(G,h.mapPlanet)){
+            G.campaignState.targetPlanet=h.mapPlanet;
+            G.notif='КУРС ЗАДАН: '+(PLANETS[h.mapPlanet]||PLANETS.drosh).name;
+            G.notifT=130;G.notifCol=P.CYA;
+            sfxUI2();sfxPU();flash(.2,P.CYA);
+            // Возвращаемся на главный экран корабля
+            G.shipUI='main';
+          } else {
+            G.notif='ПЛАНЕТА ЗАКРЫТА';G.notifT=80;G.notifCol=P.RED;sfxHit();
+          }
+          mC=false;break;
+        }
+      }
+    }
+  }
+}
+
+function drwShipMap(G){
+  const t=G.shipT;
+  rc(0,0,LW,LH,'#020412');
+  // Фоновая решётка координат
+  for(let y=0;y<LH;y+=10){cx.globalAlpha=0.06;rc(0,y,LW,1,P.UIT);}
+  for(let x=0;x<LW;x+=10){cx.globalAlpha=0.06;rc(x,0,1,LH,P.UIT);}
+  cx.globalAlpha=1;
+  // ===== ВЕРХНИЙ ЗАГОЛОВОК =====
+  rc(0,0,LW,16,'#0a1828');
+  rc(0,15,LW,1,P.PUR);
+  txs('< НАЗАД',24,5,P.UIT2,P.BLK,1);
+  txcs('СИСТЕМНАЯ КАРТА',5,P.PUR,P.BLK,1);
+  const dest=(PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh).name;
+  const destTxt='ЦЕЛЬ: '+dest;
+  txs(destTxt,LW-gw(destTxt)-3,5,P.CYA,P.BLK,1);
+
+  // ===== ЦЕНТР КАРТЫ =====
+  const cx_=LW/2, cy_=LH/2+8;
+  // Орбиты как тусклые кольца
+  cx.globalAlpha=.15;
+  ring(cx_,cy_,32,P.PUR2,1);
+  ring(cx_,cy_,48,P.PUR2,1);
+  ring(cx_,cy_,62,P.PUR2,1);
+  cx.globalAlpha=1;
+  // Маршрут (соединительные линии между планетами по порядку)
+  cx.globalAlpha=.30;
+  cx.strokeStyle=P.UIT2;cx.lineWidth=1;
+  cx.setLineDash([2,2]);
+  cx.beginPath();
+  for(let i=0;i<_MAP_PLANETS.length;i++){
+    const p=_MAP_PLANETS[i];
+    const px=cx_+Math.cos(p.angle)*p.r;
+    const py=cy_+Math.sin(p.angle)*p.r;
+    if(i===0)cx.moveTo(px,py);else cx.lineTo(px,py);
+  }
+  cx.stroke();
+  cx.setLineDash([]);
+  cx.globalAlpha=1;
+
+  // Тина в центре (особый рендер)
+  const tinaPulse=.7+.3*Math.sin(t*.08);
+  cx.globalAlpha=.4*tinaPulse;disc(cx_|0,cy_|0,9,P.TINA);
+  cx.globalAlpha=.7*tinaPulse;disc(cx_|0,cy_|0,5,P.TINA2);
+  cx.globalAlpha=1;disc(cx_|0,cy_|0,3,P.TINA_CORE);
+
+  G._shipSubHits=[];
+
+  // Планеты с подписями
+  const curPlanet=G.campaignState.currentPlanet||'drosh';
+  const targetPlanet=G.campaignState.targetPlanet||'drosh';
+  for(const p of _MAP_PLANETS){
+    const px=(cx_+Math.cos(p.angle)*p.r)|0;
+    const py=(cy_+Math.sin(p.angle)*p.r)|0;
+    const unlocked=_mapIsUnlocked(G,p.id);
+    const isCurrent=(curPlanet===p.id);
+    const isTarget=(targetPlanet===p.id);
+    const sz=p.id==='center'?6:5;
+    // Тень
+    cx.fillStyle='rgba(0,0,0,0.5)';cx.fillRect(px-sz,py+sz,sz*2,1);
+    // Тело планеты
+    if(unlocked){
+      disc(px,py,sz,p.col);
+      disc(px-1,py-1,sz-2,p.body);
+    } else {
+      // Закрытая — затемнённая
+      cx.globalAlpha=.35;disc(px,py,sz,'#445566');cx.globalAlpha=1;
+      txs('?',px-1,py-2,'#aaaaaa',P.BLK,1);
+    }
+    // Индикаторы статуса
+    if(isCurrent){
+      // Текущая планета — белое кольцо
+      cx.globalAlpha=.7+.3*Math.sin(t*.15);
+      ring(px,py,sz+3,P.WHT,1);
+      cx.globalAlpha=1;
+    }
+    if(isTarget&&!isCurrent){
+      // Целевая планета — жёлтый пульсирующий маркёр
+      cx.globalAlpha=.6+.4*Math.sin(t*.2);
+      ring(px,py,sz+4,P.YEL,1);
+      ring(px,py,sz+6,P.YEL,1);
+      cx.globalAlpha=1;
+    }
+    // Подпись (выше или ниже планеты, чтобы не пересекалось)
+    if(unlocked){
+      const lblY=py-sz-9;
+      const lblX=px-(gw(p.name)/2|0);
+      txs(p.name,lblX,lblY,isTarget?P.YEL:isCurrent?P.WHT:P.UIT,P.BLK,1);
+    }
+    // Хит-зона (немного шире самой планеты для удобства тача)
+    G._shipSubHits.push({x:px-10,y:py-10,w:20,h:20,mapPlanet:p.id});
+  }
+
+  // ===== НИЖНЯЯ ПОДСКАЗКА =====
+  const hint=USE_TOUCH_UI?'ТАП НА ПЛАНЕТУ — ВЫБРАТЬ КУРС':'КЛИК НА ПЛАНЕТУ — ВЫБРАТЬ КУРС';
+  txcs(hint,LH-12,P.UIT2,P.BLK,1);
+
+  // Иконка корабля игрока возле currentPlanet
+  const cur=_MAP_PLANETS.find(p=>p.id===curPlanet);
+  if(cur){
+    const cpx=(cx_+Math.cos(cur.angle)*cur.r)|0;
+    const cpy=(cy_+Math.sin(cur.angle)*cur.r)|0;
+    // Мини-корабль рядом
+    const shx=cpx+10, shy=cpy-2;
+    rc(shx-2,shy-1,4,2,P.SH1);
+    rc(shx-1,shy-2,3,1,P.SH3);
+    rc(shx+2,shy-1,2,1,P.SH1);
+    rc(shx-3,shy,1,1,P.TH1);
+  }
 }
