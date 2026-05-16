@@ -1059,6 +1059,8 @@ function startTinaBattle(G){
   // ★ Эпичный «дроп» при появлении Тины
   shake(10);flash(.6,P.TINA2);sfxBoss();hitStopAdd(4);
   TAP_FIRE=true;
+  // ★ Bugfix #6: гарантируем работающий джойстик в бою (initFinaleTina ранее отключил его для катсцены)
+  setJoyEnabled(true);
 }
 
 function spawnTinaTurrets(T){
@@ -1173,12 +1175,16 @@ function restoreFinalePhase(G,targetPhase,targetHp){
     for(const eb of T.energyBlocks)eb.alive=false;
     T.turrets=[];
     spawnTinaWeakSpots(T,3);
-    for(const ws of T.weakSpots)ws.orbitSpd=0.013;
+    // ★ Bugfix #5: фаза ярости — расширенные бреши (0.26 рад) для видимости
+    for(const ws of T.weakSpots){ws.orbitSpd=0.013;ws.arcWidth=0.26;}
     T.droneCD=80;
     T.shootCD=40;
     G.briefing={t:0,planet:'tina_phase4'};
   }
   G.notif='ВОЗВРАТ В ФАЗУ '+targetPhase;G.notifT=120;G.notifCol=P.CYA;
+  // ★ Bugfix #11: пересохраняем чекпоинт под текущую фазу, иначе следующая смерть
+  //   уйдёт в чекпоинт 'tina' (созданный initFinaleTina) — и игрок начнёт с фазы 1.
+  saveCheckpoint(G,'finale_phase_'+targetPhase);
 }
 
 // ★ Phase 2.3: добавляет одну дополнительную брешь к существующим (для переходов 3→3.5, 3.5→4).

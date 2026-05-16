@@ -93,13 +93,19 @@ function drwSniper(e){
   if(ch>=0&&ch<60){
     const intensity=ch/60;
     const ty=(e.targetY!=null)?(e.targetY|0):y;
-    cx.globalAlpha=.2+intensity*.35;
-    cx.fillStyle=P.RED;
-    cx.fillRect(0,ty,x-12,1);
+    // ★ Bugfix #8: теперь телеграф — ДИАГОНАЛЬНАЯ линия от снайпера к точке прицела (0, ty),
+    //   а не горизонталь на ty. Пуля летит по этой же линии (см. spawn в 12-scene-space.js).
+    cx.globalAlpha=.25+intensity*.45;
+    cx.strokeStyle=P.RED;cx.lineWidth=1;
+    cx.beginPath();
+    cx.moveTo(x-12,y);
+    cx.lineTo(0,ty);
+    cx.stroke();
+    // Мигающая точка прицела на цели (у левого края, где пуля выйдет за экран)
     if(Math.floor(ch/4)%2===0){
       cx.globalAlpha=.7+intensity*.3;
-      rc(8,ty-1,3,3,P.RED);
-      rc(9,ty,1,1,P.YEL);
+      rc(2,ty-1,3,3,P.RED);
+      rc(3,ty,1,1,P.YEL);
     }
     cx.globalAlpha=1;
   }

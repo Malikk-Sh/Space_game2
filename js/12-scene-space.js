@@ -596,8 +596,16 @@ function updSpace(G){
         if(ch===0)e.targetY=p.y; // фиксируем цель в начале зарядки
         e.chargeT=ch+1;
       } else if(ch===60){
-        // Выстрел!
-        G.ebuls.push({x:e.x-9,y:e.targetY,vx:-5,vy:0,kind:'pierce',dmg:15});
+        // ★ Bugfix #8: пуля вылетает ОТ снайпера и летит к точке прицела (ранее спавнилась
+        //   уже на targetY, что выглядело как "висящая горизонтально" пуля). Теперь —
+        //   диагональный вектор (e.x, e.y) → (0, targetY), скорость 5.
+        const _dx=-200, _dy=(e.targetY!=null?e.targetY:p.y)-e.y;
+        const _dist=Math.hypot(_dx,_dy)||1;
+        G.ebuls.push({
+          x:e.x-9, y:e.y,
+          vx:_dx/_dist*5, vy:_dy/_dist*5,
+          kind:'pierce', dmg:15,
+        });
         bip(900,.12,.15,'square',1200,600);
         e.chargeT=-120;
       } else {
