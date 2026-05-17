@@ -12,11 +12,11 @@
 //   ещё использует только два уровня.
 // ============================================================
 const WEAPONS=[
-  {id:'l1',     idx:0, name:'ЛАЗЕР L1', short:'L1', dmg:2,    en:30, cd:7,  kind:'simple',  col:P.L1,  lv:1, vx:7, range:52, legacyWep:1},
+  {id:'l1',     idx:0, name:'ЛАЗЕР L1', short:'L1', dmg:2,    en:15, cd:7,  kind:'simple',  col:P.L1,  lv:1, vx:7, range:52, legacyWep:1},
   {id:'spread', idx:1, name:'СПРЕД',     short:'SPR',dmg:1,    en:18, cd:14, kind:'spread',  col:P.L1L, lv:1, vx:6, range:40, legacyWep:1},
   {id:'missile',idx:2, name:'РАКЕТА',    short:'MSL',dmg:5,    en:50, cd:30, kind:'missile', col:P.ORA, lv:1, vx:3, range:90, legacyWep:1},
-  {id:'l2',     idx:3, name:'ЛАЗЕР L2', short:'L2', dmg:10,   en:132, cd:28, kind:'simple',  col:P.L3,  lv:3, vx:5, range:40, legacyWep:2},
-  {id:'beam',   idx:4, name:'ЛУЧ',       short:'BMM',dmg:0.17, en:1,  cd:0,  kind:'beam',    col:P.L2,  lv:1, vx:14,range:24, legacyWep:2},
+  {id:'l2',     idx:3, name:'ЛАЗЕР L2', short:'L2', dmg:10,   en:66, cd:28, kind:'simple',  col:P.L3,  lv:3, vx:5, range:40, legacyWep:2},
+  {id:'beam',   idx:4, name:'ЛУЧ',       short:'BMM',dmg:0.17, en:3,  cd:0,  kind:'beam',    col:P.L2,  lv:1, vx:14,range:24, legacyWep:2},
 ];
 
 // Разблокировано ли оружие по индексу WEAPONS
@@ -244,7 +244,8 @@ function updSpace(G){
   // Fuel-room снижает расход топлива (1 рабочий = -5% расхода)
   const _fuelEff=1/(1+_sw.fuel*0.05);
   sh.fuel=Math.max(0,sh.fuel-0.009*_fuelEff);
-  if(sh.fuel<=0&&G.sT%120===0){G.notif='ТОПЛИВО КОНЧИЛОСЬ! УПРАВЛЕНИЕ НЕДОСТУПНО';G.notifT=90;G.notifCol=P.RED;sfxHit();}
+  // Виньетка (<10%) визуально сигнализирует — текстовый спам в этой зоне не нужен
+  if(sh.fuel<10){if(sh.fuel<=0&&G.sT%400===0){G.notif='ТОПЛИВО ЗАКОНЧИЛОСЬ';G.notifT=60;G.notifCol=P.RED;}}
   else if(sh.fuel<15&&G.sT%180===0){G.notif='КРИТИЧНО: ТОПЛИВО КОНЧАЕТСЯ!';G.notifT=110;G.notifCol=P.RED;}
   else if(sh.fuel<30&&G.sT%200===0){G.notif='ТОПЛИВО КОНЧАЕТСЯ... ОСТАЛОСЬ: '+Math.floor(sh.fuel)+'%';G.notifT=80;G.notifCol=P.ORA;}
   // Power-room регенерирует энергию (1 рабочий = +0.18 EN/кадр); вдвое медленнее без топлива
@@ -314,9 +315,9 @@ function updSpace(G){
   if(USE_TOUCH_UI&&TOUCH.joyActive){ix=TOUCH.joyDX;iy=TOUCH.joyDY;}
   const il=Math.hypot(ix,iy)||1;
   const boostOn=(K.ShiftLeft||btnHeld('boost'))&&p.en>10&&sh.fuel>20;
-  // Топливо влияет на тягу: нет топлива → 0 тяги, <20% → 60%, иначе 100%
+  // Топливо влияет на тягу: нет топлива → 25% (дрейф), <20% → 60%, иначе 100%
   const fuelFrac=sh.fuel/100;
-  const thrustMult=sh.fuel<=0?0:(fuelFrac<0.2?0.6:1);
+  const thrustMult=sh.fuel<=0?0.25:(fuelFrac<0.2?0.6:1);
   const thrust=(boostOn?.55:.35)*thrustMult;
   if(boostOn){p.en-=.5;sh.fuel=Math.max(0,sh.fuel-.055);p.boost=4;}
   if((ix||iy)&&sh.fuel>0)sh.fuel=Math.max(0,sh.fuel-.018);
@@ -817,7 +818,7 @@ function updSpace(G){
 
   // Прогресс полёта
   const spNow=Math.hypot(p.vx,p.vy);
-  const fuelMult=sh.fuel>0?1:0;
+  const fuelMult=sh.fuel>0?1:0.15;
   const travelMult=(1+(boostOn?1.25:0)+Math.min(1,spNow/2.2)*0.35)*fuelMult;
   G.prog=Math.min(1,G.prog+0.000183*travelMult*_DEV.speedMult);
 
