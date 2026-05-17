@@ -12,10 +12,10 @@
 //   ещё использует только два уровня.
 // ============================================================
 const WEAPONS=[
-  {id:'l1',     idx:0, name:'ЛАЗЕР L1', short:'L1', dmg:2,    en:10, cd:7,  kind:'simple',  col:P.L1,  lv:1, vx:7, range:52, legacyWep:1},
+  {id:'l1',     idx:0, name:'ЛАЗЕР L1', short:'L1', dmg:2,    en:15, cd:7,  kind:'simple',  col:P.L1,  lv:1, vx:7, range:52, legacyWep:1},
   {id:'spread', idx:1, name:'СПРЕД',     short:'SPR',dmg:1,    en:18, cd:14, kind:'spread',  col:P.L1L, lv:1, vx:6, range:40, legacyWep:1},
-  {id:'missile',idx:2, name:'РАКЕТА',    short:'MSL',dmg:5,    en:25, cd:30, kind:'missile', col:P.ORA, lv:1, vx:3, range:90, legacyWep:1},
-  {id:'l2',     idx:3, name:'ЛАЗЕР L2', short:'L2', dmg:10,   en:44, cd:28, kind:'simple',  col:P.L3,  lv:3, vx:5, range:40, legacyWep:2},
+  {id:'missile',idx:2, name:'РАКЕТА',    short:'MSL',dmg:5,    en:50, cd:30, kind:'missile', col:P.ORA, lv:1, vx:3, range:90, legacyWep:1},
+  {id:'l2',     idx:3, name:'ЛАЗЕР L2', short:'L2', dmg:10,   en:66, cd:28, kind:'simple',  col:P.L3,  lv:3, vx:5, range:40, legacyWep:2},
   {id:'beam',   idx:4, name:'ЛУЧ',       short:'BMM',dmg:0.17, en:1,  cd:0,  kind:'beam',    col:P.L2,  lv:1, vx:14,range:24, legacyWep:2},
 ];
 
@@ -249,6 +249,8 @@ function updSpace(G){
   else if(sh.fuel<30&&G.sT%200===0){G.notif='ТОПЛИВО КОНЧАЕТСЯ... ОСТАЛОСЬ: '+Math.floor(sh.fuel)+'%';G.notifT=80;G.notifCol=P.ORA;}
   // Power-room регенерирует энергию (1 рабочий = +0.144 EN/кадр)
   p.en=Math.min(p.men,p.en+.144*_sw.power);
+  // Workshop workers passively repair ship hull (0.01 HP/frame per worker)
+  if(_sw.workshop>0)p.hp=Math.min(p.mhp,p.hp+_sw.workshop*0.01);
   // Workshop-room продвигает крафт-очередь (1 рабочий = +1 ед/кадр)
   if(_sw.workshop>0&&G.ship.craftQueue&&G.ship.craftQueue.length>0){
     const item=G.ship.craftQueue[0];
@@ -784,13 +786,14 @@ function updSpace(G){
     for(const b of G.buls){
       const bdx=al.x-b.x,bdy=al.y-b.y,bd=Math.hypot(bdx,bdy);
       if(bd<12){
-        const force=2+Math.random()*2;
+        const force=0.25+Math.random()*0.15;
         al.vx+=(bdx/bd||0)*force;al.vy+=(bdy/bd||0)*force;
+        spPts(al.x,al.y,3,[P.PUR,'#aaeeff'],0.3,1.0,6,0.01);
       }
     }
     if(d<12){
       G.pl.workers++;
-      if(G.ship&&G.ship.workers)G.ship.workers.power++;
+      addWorkerToShip(G);
       const isFirst=!G._reygarFirst;
       G._reygarFirst=true;
       const msg=isFirst?'ЗОРП ЗАВЕРБОВАЛ РЕЙГАРА!':'РЕЙГАР ПРИСОЕДИНИЛСЯ!';

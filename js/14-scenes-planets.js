@@ -5,6 +5,22 @@
 // (originally sintara_v25.html lines 3537-5433)
 // ============================================================
 
+// Shared launch helper: heals player, refuels, starts space flight.
+// If player has the star map, always opens nav map first for course selection.
+function _launchToSpace(G,hpGain,fuelGain){
+  startTrans(()=>{
+    G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+hpGain);
+    G.pl.en=G.pl.men;
+    G.ship.fuel=Math.min(100,G.ship.fuel+fuelGain);
+    initSpace(G);
+    if(G.campaignState.inventory&&G.campaignState.inventory.starMap){
+      G.state='ship_view';G.shipUI='map';G.shipReturnState='space';
+      G.shipT=0;TAP_FIRE=false;ALLOW_JOY=false;
+      resetBtns();addBtn('back',20,24,10,'<',P.UIT);
+    }
+  });
+}
+
 // ======= PLANET DROSH =======
 function initPlanetDrosh(G){
   TAP_FIRE=false;ALLOW_JOY=true;G.state='planet_drosh';G.shipReturnState='planet_drosh';
@@ -261,13 +277,13 @@ function updPlanetDrosh(G){
       if(!G.campaignState.planetsCompleted.includes('drosh'))G.campaignState.planetsCompleted.push('drosh');
       if(!G._visitTargetSet)G.campaignState.targetPlanet=PLANETS.drosh.nextPlanet;
       G._visitTargetSet=false;
-      startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);});
+      _launchToSpace(G,30,40);
     } else if(G._launchWarnT>0){
       // Второе нажатие — вылет без выполненного квеста
       sfxLand();
       if(!G._visitTargetSet)G.campaignState.targetPlanet=PLANETS.drosh.nextPlanet;
       G._visitTargetSet=false;G._launchWarnT=0;
-      startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);});
+      _launchToSpace(G,30,40);
     } else {
       // Первое нажатие — предупреждение
       if(!G.droshSide||!G.droshSide.questAccepted){G.notif='КВЕСТ НЕ ПРИНЯТ! НАЖМИ ЕЩЁ РАЗ ДЛЯ ВЫЛЕТА.';}
@@ -1204,12 +1220,12 @@ function updPlanetBubblika(G){
       if(!G.campaignState.planetsCompleted.includes('bubblika'))G.campaignState.planetsCompleted.push('bubblika');
       if(!G._visitTargetSet)G.campaignState.targetPlanet=PLANETS.bubblika.nextPlanet;
       G._visitTargetSet=false;
-      startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);});
+      _launchToSpace(G,30,40);
     } else if(G._launchWarnT>0){
       sfxLand();
       if(!G._visitTargetSet)G.campaignState.targetPlanet=PLANETS.bubblika.nextPlanet;
       G._visitTargetSet=false;G._launchWarnT=0;
-      startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);});
+      _launchToSpace(G,30,40);
     } else {
       if(!pfftDone&&!blabDone)G.notif='КВЕСТЫ НЕ ВЫПОЛНЕНЫ! НАЖМИ ЕЩЁ РАЗ ДЛЯ ВЫЛЕТА.';
       else if(!pfftDone)G.notif='ПОСЫЛКИ НЕ ДОСТАВЛЕНЫ! НАЖМИ ЕЩЁ РАЗ ДЛЯ ВЫЛЕТА.';
@@ -1704,11 +1720,11 @@ function initPlanetKrasnozem(G){
   G.krz={baseX:72,baseY:88,turretA:0,turretFlash:0,
     questActive:!!G.campaignState.flags.krzQuestStarted,
     shells:[
-      {x:282,y:48,picked:false,delivered:false,t:0},
-      {x:205,y:92,picked:false,delivered:false,t:2},
+      {x:282,y:90,picked:false,delivered:false,t:0},
+      {x:205,y:95,picked:false,delivered:false,t:2},
       {x:132,y:148,picked:false,delivered:false,t:3},
       {x:248,y:152,picked:false,delivered:false,t:4},
-      {x:171,y:50,picked:false,delivered:false,t:1},
+      {x:171,y:85,picked:false,delivered:false,t:1},
     ],
     carryIdx:-1,delivered:0,shellShots:[],coreReady:false,
     // Базовый ветер всегда дует, порывы — сильнее
@@ -1719,9 +1735,9 @@ function initPlanetKrasnozem(G){
     streaks:Array.from({length:18},()=>({x:Math.random()*LW,y:34+Math.random()*120,sp:0.5+Math.random()*0.6,len:6+Math.random()*8})),
     scavengers:[
       {x:230,y:120,vx:0,vy:0,t:0,cooldown:0,wanderA:0,alive:true},
-      {x:154,y:62,vx:0,vy:0,t:30,cooldown:0,wanderA:Math.PI,alive:true},
+      {x:154,y:88,vx:0,vy:0,t:30,cooldown:0,wanderA:Math.PI,alive:true},
       {x:286,y:132,vx:0,vy:0,t:60,cooldown:0,wanderA:Math.PI*0.5,alive:true},
-      {x:252,y:58,vx:0,vy:0,t:90,cooldown:0,wanderA:Math.PI*1.2,alive:true},
+      {x:252,y:82,vx:0,vy:0,t:90,cooldown:0,wanderA:Math.PI*1.2,alive:true},
       {x:185,y:150,vx:0,vy:0,t:120,cooldown:0,wanderA:Math.PI*0.2,alive:true},
     ],
     // ★ Phase 4.2: данные для атмосферы — дальние горы (2 слоя зубчатых силуэтов),
@@ -1876,7 +1892,7 @@ function updPlanetKrasnozem(G){
     if(s.y<32)s.y=LH-4;
   }
 
-  pc.x=Math.max(8,Math.min(LW-8,pc.x));pc.y=Math.max(30,Math.min(LH-16,pc.y));
+  pc.x=Math.max(8,Math.min(LW-8,pc.x));pc.y=Math.max(76,Math.min(LH-16,pc.y));
   if(pc.hurtT>0)pc.hurtT--;
   if(mv&&G.sT%6===0)spPts(pc.x,pc.y+5,1,[P.KRZ2,P.KRZ3],.2,.8,10,0,.8);
 
@@ -1889,7 +1905,7 @@ function updPlanetKrasnozem(G){
       if(chase){s.vx+=dx/d*0.035;s.vy+=dy/d*0.035;}
       else{s.wanderA+=0.025;s.vx+=Math.cos(s.wanderA)*0.015;s.vy+=Math.sin(s.wanderA*1.3)*0.015;}
       s.vx*=0.94;s.vy*=0.94;s.x+=s.vx;s.y+=s.vy;
-      s.x=Math.max(12,Math.min(LW-12,s.x));s.y=Math.max(34,Math.min(LH-14,s.y));
+      s.x=Math.max(12,Math.min(LW-12,s.x));s.y=Math.max(76,Math.min(LH-14,s.y));
       if(d<10&&s.cooldown<=0){s.cooldown=55;pc.hurtT=28;G.pl.hp=Math.max(1,G.pl.hp-8);sfxHit();shake(4);spPts(pc.x,pc.y,10,[P.RED,P.KRZ3],.6,2.2,18,.02);fText(pc.x,pc.y-12,'-8 ХП',P.RED);if(carrying&&Math.random()<.35){const sh=KZ.shells[KZ.carryIdx];sh.picked=false;sh.x=pc.x-8*pc.facing;sh.y=pc.y;KZ.carryIdx=-1;G.notif='СНАРЯД ВЫБИТ ИЗ РУК!';G.notifT=90;G.notifCol=P.RED;}}
       if(s.cooldown>0)s.cooldown--;
     }
@@ -1946,12 +1962,12 @@ function updPlanetKrasnozem(G){
       if(!G.campaignState.planetsCompleted.includes('krasnozem'))G.campaignState.planetsCompleted.push('krasnozem');
       if(!G._visitTargetSet)G.campaignState.targetPlanet='center';
       G._visitTargetSet=false;
-      startTrans(()=>{G.pl.hp=G.pl.mhp;G.pl.en=G.pl.men;G.ship.fuel=100;initSpace(G);});
+      _launchToSpace(G,G.pl.mhp,100);
     } else if(G._launchWarnT>0){
       sfxLand();
       if(!G._visitTargetSet)G.campaignState.targetPlanet='center';
       G._visitTargetSet=false;G._launchWarnT=0;
-      startTrans(()=>{G.pl.hp=G.pl.mhp;G.pl.en=G.pl.men;G.ship.fuel=100;initSpace(G);});
+      _launchToSpace(G,G.pl.mhp,100);
     } else {
       G.notif='ЗАДАНИЕ НЕ ЗАВЕРШЕНО! НАЖМИ ЕЩЁ РАЗ ДЛЯ ВЫЛЕТА.';
       G.notifT=180;G.notifCol=P.ORA;G._launchWarnT=180;sfxHit();

@@ -78,9 +78,8 @@ function updShip(G){
       G.campaignState.targetPlanet=PLANETS[planetKey].nextPlanet;
       G.shipReturnState=null;
       const hadStarMap=!!(G.campaignState.inventory&&G.campaignState.inventory.starMap);
-      const targetWasSet=!!G._visitTargetSet;
       G._visitTargetSet=false;
-      startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);if(hadStarMap&&!targetWasSet){G.state='ship_view';G.shipUI='map';G.shipReturnState='space';G.shipT=0;TAP_FIRE=false;ALLOW_JOY=false;resetBtns();addBtn('back',20,24,10,'<',P.UIT);}});
+      startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);if(hadStarMap){G.state='ship_view';G.shipUI='map';G.shipReturnState='space';G.shipT=0;TAP_FIRE=false;ALLOW_JOY=false;resetBtns();addBtn('back',20,24,10,'<',P.UIT);}});
       return;
     }
   }
@@ -828,10 +827,16 @@ function drwShipWorkshopScene(G,x,y,w,h,t,inv){
 }
 
 function drwShipBridgeScene(G,x,y,w,h,t){
+  rc(x+1,y,w-2,h-3,'#0a0814');
+  // Карта заблокирована пока не получена от Клирра
+  if(!G.campaignState.inventory.starMap){
+    rc(x+1,y+1,w-2,h-4,'#060810');
+    txs('НАВ.КАРТА:',x+3,y+4,'#334455',P.BLK,1);
+    txs('ПОЛУЧИ У КЛИРРА',x+3,y+11,'#223344',P.BLK,1);
+    return;
+  }
   // === ЭКРАН-КАРТА СОЛНЕЧНОЙ СИСТЕМЫ ===
   // Показывает 4 объекта в ряд (Дрош, Бубблика, Краснозём, Тина)
-  // Стрелка указывает где находится игрок прямо сейчас.
-  rc(x+1,y,w-2,h-3,'#0a0814');
 
   // Заголовок монитора
   rc(x+1,y+1,w-2,7,'#102030');
@@ -1129,13 +1134,13 @@ function addTinaWeakSpot(T){
 function _workshopItems(G){
   const inv=G.campaignState.inventory;
   return [
-    {id:'l2',     label:'ЛАЗЕР L2', cost:90,  matCost:0, total:480,
+    {id:'l2',     label:'ЛАЗЕР L2', cost:90,  matCost:0, total:960,
       have:inv.laserStrong, lock:!inv.laserBlueprint, lockHint:'НУЖЕН ЧЕРТЁЖ (ДРОШ)'},
-    {id:'shield', label:'ЭНЕРГОЩИТ', cost:60, matCost:0, total:360,
+    {id:'shield', label:'ЭНЕРГОЩИТ', cost:60, matCost:0, total:720,
       have:inv.shieldBuilt, lock:!inv.bubblikaContract, lockHint:'НУЖЕН ЧЕРТЁЖ (БУББЛИКА)'},
-    {id:'spread', label:'СПРЕД',   cost:30, matCost:0, total:300, have:inv.spreadUnlocked},
-    {id:'missile',label:'РАКЕТА',  cost:50, matCost:1, total:600, have:inv.missileUnlocked},
-    {id:'beam',   label:'ЛУЧ',     cost:80, matCost:1, total:840, have:inv.beamUnlocked},
+    {id:'spread', label:'СПРЕД',   cost:30, matCost:0, total:600, have:inv.spreadUnlocked},
+    {id:'missile',label:'РАКЕТА',  cost:50, matCost:1, total:1200, have:inv.missileUnlocked},
+    {id:'beam',   label:'ЛУЧ',     cost:80, matCost:1, total:1680, have:inv.beamUnlocked},
   ];
 }
 
@@ -1224,7 +1229,7 @@ function _buyUpgrade(G,upgradeId){
     G.campaignState.upgrades.en++;
   } else if(upgradeId==='workers'){
     G.pl.workers++;
-    ensureShipWorkers(G);G.ship.workers.power++;
+    addWorkerToShip(G);
     G.campaignState.upgrades.workers++;
   } else if(upgradeId==='speed'){
     if(!G.campaignState.upgrades.speed)G.campaignState.upgrades.speed=0;
@@ -1240,6 +1245,8 @@ function _buyUpgrade(G,upgradeId){
 }
 
 function updShipWorkshop(G){
+  // Click on the header "НАЗАД" area → return to main
+  if(mC&&mX>=12&&mX<=58&&mY>=1&&mY<=14){G.shipUI='main';sfxUI();mC=false;return;}
   // Tutorial on first visit
   if(!G.campaignState.flags.tutWorkshopShown){
     G.campaignState.flags.tutWorkshopShown=true;
@@ -1388,6 +1395,8 @@ function drwShipWorkshop(G){
 // ЭКРАН РАБОЧИХ
 // ============================================================
 function updShipWorkers(G){
+  // Click on the header "НАЗАД" area → return to main
+  if(mC&&mX>=20&&mX<=66&&mY>=1&&mY<=14){G.shipUI='main';sfxUI();mC=false;return;}
   // Tutorial on first visit
   if(!G.campaignState.flags.tutWorkersShown){
     G.campaignState.flags.tutWorkersShown=true;
@@ -1440,7 +1449,7 @@ function drwShipWorkers(G){
     {id:'bridge',name:'МОСТИК',col:P.UIT,
       effect:(w.bridge>0?'-'+(w.bridge*5)+'% ВХОДЯЩЕГО УРОНА':'НЕТ ЭФФЕКТА')},
     {id:'workshop',name:'МАСТЕРСКАЯ',col:P.GRN,
-      effect:(w.workshop>0?'+'+w.workshop+' ЕД./КАДР КРАФТА':'КРАФТ ОСТАНОВЛЕН')},
+      effect:(w.workshop>0?'+'+w.workshop+' КРАФТ / +'+((w.workshop*0.01).toFixed(2))+' ХП/КАДР':'КРАФТ ОСТАНОВЛЕН')},
   ];
   let py=22;
   const cardH=28,cardMargin=4;
@@ -1509,6 +1518,8 @@ function _mapIsUnlocked(G,planetId){
 }
 
 function updShipMap(G){
+  // Click on the header "НАЗАД" area → return to main
+  if(mC&&mX>=20&&mX<=66&&mY>=1&&mY<=14){G.shipUI='main';sfxUI();mC=false;return;}
   // Tutorial on first visit
   if(!G.campaignState.flags.tutMapShown){
     G.campaignState.flags.tutMapShown=true;
