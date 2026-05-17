@@ -24,7 +24,7 @@ if(!USE_TOUCH_UI){
   txt('КР:'+p.cr,pbx,10,P.YEL,1);
   txt('РЕ:'+p.res,pbx+34,10,P.RES,1);
   txs(activeName,pbx+74,10,activeCol,P.BLK,1);
-}if(G.ship){const fy=18;const fc=G.ship.fuel<20?P.RED:P.ORA;cx.globalAlpha=.92;rc(2,fy,54,7,P.UIB);txt('ТОПЛ',4,fy+1,P.UIT2,1);bar(25,fy+1,28,4,G.ship.fuel/100,fc,P.DIM2,P.DIM);if(G.ship.fuel<1&&Math.floor(G.sT/12)%2)txs('АВАР.ХОД',58,fy+1,P.RED,P.BLK,1);cx.globalAlpha=1;}drwWorkerHUD(G);}
+}if(G.ship){const fy=18;const fc=G.ship.fuel<20?P.RED:P.ORA;cx.globalAlpha=.92;rc(2,fy,54,7,P.UIB);txt('ТОПЛ',4,fy+1,P.UIT2,1);bar(25,fy+1,28,4,G.ship.fuel/100,fc,P.DIM2,P.DIM);if(G.ship.fuel<1&&Math.floor(G.sT/12)%2)txs('АВАР.ХОД',58,fy+1,P.RED,P.BLK,1);cx.globalAlpha=1;if(G.ship.craftQueue&&G.ship.craftQueue.length>0){const cq=G.ship.craftQueue[0];const pct=(cq.progress/cq.total*100)|0;cx.globalAlpha=.92;rc(2,fy+8,54,7,P.UIB);txt('КРАФТ',4,fy+9,P.UIT2,1);bar(25,fy+9,28,4,cq.progress/cq.total,P.YEL,P.DIM2,P.DIM);txs(pct+'%',56,fy+9,P.YEL,P.BLK,1);cx.globalAlpha=1;}}drwWorkerHUD(G);}
 function drwJoystick(){if(!USE_TOUCH_UI||!ALLOW_JOY)return;if(!TOUCH.joyActive){const bx=38,by=LH-38;cx.globalAlpha=.25;ring(bx,by,22,P.UIT2,1);ring(bx,by,8,P.UIT2,1);cx.globalAlpha=.4;txt('MOVE',bx-9,by+26,P.UIT2,1);cx.globalAlpha=1;}else{cx.globalAlpha=.5;disc(TOUCH.joyBaseX|0,TOUCH.joyBaseY|0,22,'#001122');ring(TOUCH.joyBaseX|0,TOUCH.joyBaseY|0,22,P.UIT,1);cx.globalAlpha=1;cx.globalAlpha=.85;disc(TOUCH.joyX|0,TOUCH.joyY|0,9,P.UIT);disc(TOUCH.joyX|0,TOUCH.joyY|0,6,P.UIT2);cx.globalAlpha=1;}}
 // ★ v16: Стилизованные иконки для ship/launch — рисуют корабль/ракету вместо буквы
 function drwShipIcon(cx_,cy_,col){
