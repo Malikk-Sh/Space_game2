@@ -6,15 +6,18 @@
 // ============================================================
 
 // Shared launch helper: heals player, refuels, starts space flight.
-// If player has the star map, always opens nav map first for course selection.
+// If player has the star map, opens nav map first; preserves planet return state for launch button.
 function _launchToSpace(G,hpGain,fuelGain){
+  const savedReturnState=G.shipReturnState;
   startTrans(()=>{
     G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+hpGain);
     G.pl.en=G.pl.men;
     G.ship.fuel=Math.min(100,G.ship.fuel+fuelGain);
     initSpace(G);
     if(G.campaignState.inventory&&G.campaignState.inventory.starMap){
-      G.state='ship_view';G.shipUI='map';G.shipReturnState='space';
+      G.state='ship_view';G.shipUI='map';
+      G.shipReturnState=savedReturnState; // keep planet state so launch button stays visible
+      G._navFromLaunch=true; // already launched — pressing launch again just goes to space
       G.shipT=0;TAP_FIRE=false;ALLOW_JOY=false;
       resetBtns();addBtn('back',20,24,10,'<',P.UIT);
     }
