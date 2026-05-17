@@ -51,18 +51,25 @@ function updShip(G){
     },100);
   }
 
-  if(KD.Tab||btnJust('back')){sfxUI();startTrans(()=>{ALLOW_JOY=true;TAP_FIRE=false;G.state=G.shipReturnState||'planet_drosh';resetBtns();
-    if(G.state==='planet_drosh'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);}
-    else if(G.state==='planet_bubblika'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);addBtn('jump',LW-20,LH-48,12,'J',P.CYA);}
-    else if(G.state==='planet_krasnozem'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);}
-    else if(G.state==='space'){
-      // ★ Phase 2.4: возврат в космос с сохранённым состоянием полёта
-      TAP_FIRE=true;ALLOW_JOY=true;
-      if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}
+  if(KD.Tab||btnJust('back')){sfxUI();
+    if(G._navFromLaunch){
+      // Already launched — back goes to space, not the planet
+      G._navFromLaunch=false;G.shipReturnState=null;
+      startTrans(()=>{G.state='space';TAP_FIRE=true;ALLOW_JOY=true;if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}});
+    }else{
+      startTrans(()=>{ALLOW_JOY=true;TAP_FIRE=false;G.state=G.shipReturnState||'planet_drosh';resetBtns();
+        if(G.state==='planet_drosh'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);}
+        else if(G.state==='planet_bubblika'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);addBtn('jump',LW-20,LH-48,12,'J',P.CYA);}
+        else if(G.state==='planet_krasnozem'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);}
+        else if(G.state==='space'){
+          TAP_FIRE=true;ALLOW_JOY=true;
+          if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}
+        }
+        else if(G.state==='finale_tina'){addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}
+        return;
+      });
     }
-    else if(G.state==='finale_tina'){addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}
-    return;
-  });}
+  }
 
   // ★ v16 r4 (other-4): ВЗЛЁТ из интерфейса корабля по [L] / тач-кнопке
   // (только если игрок прибыл сюда с планеты и квест на ней выполнен)
@@ -75,11 +82,18 @@ function updShip(G){
     if(canLaunchHere&&(KD.KeyL||(USE_TOUCH_UI&&btnJust('launch')))){
       sfxLand();
       if(!G.campaignState.planetsCompleted.includes(planetKey))G.campaignState.planetsCompleted.push(planetKey);
-      G.campaignState.targetPlanet=PLANETS[planetKey].nextPlanet;
-      G.shipReturnState=null;
-      const hadStarMap=!!(G.campaignState.inventory&&G.campaignState.inventory.starMap);
-      G._visitTargetSet=false;
-      startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);if(hadStarMap){G.state='ship_view';G.shipUI='map';G.shipReturnState='space';G.shipT=0;TAP_FIRE=false;ALLOW_JOY=false;resetBtns();addBtn('back',20,24,10,'<',P.UIT);}});
+      if(G._navFromLaunch){
+        // Space already initialized by _launchToSpace — just transition to it
+        G._navFromLaunch=false;
+        G.shipReturnState=null;
+        startTrans(()=>{G.state='space';TAP_FIRE=true;ALLOW_JOY=true;if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}});
+      }else{
+        G.campaignState.targetPlanet=PLANETS[planetKey].nextPlanet;
+        G.shipReturnState=null;
+        const hadStarMap=!!(G.campaignState.inventory&&G.campaignState.inventory.starMap);
+        G._visitTargetSet=false;
+        startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);if(hadStarMap){G.state='ship_view';G.shipUI='map';G.shipReturnState=null;G._navFromLaunch=false;G.shipT=0;TAP_FIRE=false;ALLOW_JOY=false;resetBtns();addBtn('back',20,24,10,'<',P.UIT);}});
+      }
       return;
     }
   }
@@ -574,8 +588,7 @@ function drwShipView(G){
     const fl=Math.floor(G.shipT/4)%2;
     cx.fillStyle='#ff8822';cx.fillRect(iconX,iconY+2,3,fl?2:1);
     cx.fillStyle='#ffee44';cx.fillRect(iconX+1,iconY+2,1,fl?2:1);
-    // Стрелка → к названию планеты
-    txs('→ '+launchPlanetLabel,panelX+11,cntY,P.GRN,P.BLK,1);
+    txs('ЗАПУСК',panelX+11,cntY,P.GRN,P.BLK,1);
     // Подсказка управления внизу (мигает)
     cx.globalAlpha=pulse;
     txs(USE_TOUCH_UI?'[ТАП]':'[L]',panelX+panelW-14,cntY,P.GRN,P.BLK,1);

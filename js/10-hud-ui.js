@@ -24,7 +24,7 @@ if(!USE_TOUCH_UI){
   txt('КР:'+p.cr,pbx,10,P.YEL,1);
   txt('РЕ:'+p.res,pbx+34,10,P.RES,1);
   txs(activeName,pbx+74,10,activeCol,P.BLK,1);
-}if(G.ship){const fy=18;const fc=G.ship.fuel<20?P.RED:P.ORA;cx.globalAlpha=.92;rc(2,fy,54,7,P.UIB);txt('ТОПЛ',4,fy+1,P.UIT2,1);bar(25,fy+1,28,4,G.ship.fuel/100,fc,P.DIM2,P.DIM);if(G.ship.fuel<1&&Math.floor(G.sT/12)%2)txs('АВАР.ХОД',58,fy+1,P.RED,P.BLK,1);cx.globalAlpha=1;if(G.ship.craftQueue&&G.ship.craftQueue.length>0){const cq=G.ship.craftQueue[0];const pct=(cq.progress/cq.total*100)|0;cx.globalAlpha=.92;rc(2,fy+8,54,7,P.UIB);txt('КРАФТ',4,fy+9,P.UIT2,1);bar(25,fy+9,28,4,cq.progress/cq.total,P.YEL,P.DIM2,P.DIM);txs(pct+'%',56,fy+9,P.YEL,P.BLK,1);cx.globalAlpha=1;}}drwWorkerHUD(G);}
+}if(G.ship){const fy=18;const fc=G.ship.fuel<20?P.RED:P.ORA;cx.globalAlpha=.92;rc(2,fy,54,7,P.UIB);txt('ТОПЛ',4,fy+1,P.UIT2,1);bar(25,fy+1,28,4,G.ship.fuel/100,fc,P.DIM2,P.DIM);if(G.ship.fuel<20&&Math.floor(G.sT/10)%2){cx.globalAlpha=.95;cx.fillStyle=G.ship.fuel<5?P.RED:P.ORA;cx.fillRect(57,fy,7,7);cx.fillStyle='#000';cx.fillRect(60,fy+1,1,4);cx.fillRect(60,fy+6,1,1);cx.fillStyle='#fff';cx.fillRect(59,fy+2,3,2);cx.globalAlpha=1;}cx.globalAlpha=1;if(G.ship.craftQueue&&G.ship.craftQueue.length>0){const cq=G.ship.craftQueue[0];const pct=(cq.progress/cq.total*100)|0;cx.globalAlpha=.92;rc(2,fy+8,54,7,P.UIB);txt('КРАФТ',4,fy+9,P.UIT2,1);bar(25,fy+9,28,4,cq.progress/cq.total,P.YEL,P.DIM2,P.DIM);txs(pct+'%',56,fy+9,P.YEL,P.BLK,1);cx.globalAlpha=1;}}drwWorkerHUD(G);}
 function drwJoystick(){if(!USE_TOUCH_UI||!ALLOW_JOY)return;if(!TOUCH.joyActive){const bx=38,by=LH-38;cx.globalAlpha=.25;ring(bx,by,22,P.UIT2,1);ring(bx,by,8,P.UIT2,1);cx.globalAlpha=.4;txt('MOVE',bx-9,by+26,P.UIT2,1);cx.globalAlpha=1;}else{cx.globalAlpha=.5;disc(TOUCH.joyBaseX|0,TOUCH.joyBaseY|0,22,'#001122');ring(TOUCH.joyBaseX|0,TOUCH.joyBaseY|0,22,P.UIT,1);cx.globalAlpha=1;cx.globalAlpha=.85;disc(TOUCH.joyX|0,TOUCH.joyY|0,9,P.UIT);disc(TOUCH.joyX|0,TOUCH.joyY|0,6,P.UIT2);cx.globalAlpha=1;}}
 // ★ v16: Стилизованные иконки для ship/launch — рисуют корабль/ракету вместо буквы
 function drwShipIcon(cx_,cy_,col){
@@ -380,6 +380,22 @@ function drwAlienBriefing(G){
 }
 
 // ======= ТУТОРИАЛ =======
+// Виньетирование красными краями при критически малом топливе
+function drwFuelVignette(G){
+  if(!G.ship)return;
+  const fuel=G.ship.fuel;
+  if(fuel>=10)return;
+  const alpha=Math.min(0.72,(1-fuel/10)*0.72);
+  const pulse=0.85+0.15*Math.sin(G.sT*0.08);
+  const rg=cx.createRadialGradient(LW/2,LH/2,LH*0.18,LW/2,LH/2,LW*0.72);
+  rg.addColorStop(0,'rgba(0,0,0,0)');
+  rg.addColorStop(0.55,'rgba(0,0,0,0)');
+  rg.addColorStop(1,'rgba(180,10,10,'+(alpha*pulse).toFixed(3)+')');
+  cx.globalAlpha=1;
+  cx.fillStyle=rg;
+  cx.fillRect(0,0,LW,LH);
+}
+
 // Простая система подсказок: показывает стрелки и текст указывающие на элементы UI/механики.
 // Игрок может закрыть тап/Enter/Esc или пройти по шагам.
 // G.tutorial = {steps:[{x,y,text,arrow:'left|right|up|down'}], step:0, t:0}
@@ -414,99 +430,124 @@ function drwTutorial(G){
   const T=G.tutorial;
   const cur=T.steps[T.step];
   if(!cur)return;
-  // Полупрозрачное затемнение
-  cx.globalAlpha=0.45;
+  const fade=Math.min(1,T.t/15);
+
+  // Полупрозрачное затемнение с вырезом для подсвеченного элемента
+  cx.globalAlpha=0.58*fade;
   rc(0,0,LW,LH,P.BLK);
   cx.globalAlpha=1;
 
-  // Подсветка области:
-  //  - если задан hrect — рисуем прямоугольник (для протяжённых UI типа HUD)
-  //  - иначе если hx/hy — пульсирующий круг
+  // Подсветка области с «вырезом» из тёмного затемнения
   if(cur.hrect){
     const hr=cur.hrect;
-    cx.globalAlpha=0.4+0.25*Math.sin(T.t*0.15);
-    // Контур пунктирной рамки
+    const pulse=0.15+0.1*Math.sin(T.t*0.18);
+    // Вырез: осветляем зону — рисуем поверх затемнения чуть более светлый прямоугольник
+    cx.globalAlpha=0.35*fade;
+    rc(hr.x-2,hr.y-2,hr.w+4,hr.h+4,'#aaccff');
+    cx.globalAlpha=1;
+    // Двойная мигающая рамка
+    cx.globalAlpha=(0.7+pulse)*fade;
     cx.strokeStyle=P.YEL;cx.lineWidth=1;
-    cx.strokeRect(hr.x-1,hr.y-1,hr.w+2,hr.h+2);
-    cx.strokeRect(hr.x-3,hr.y-3,hr.w+6,hr.h+6);
-    // Уголки усиленные
-    const cn=3;
+    cx.strokeRect(hr.x-2.5,hr.y-2.5,hr.w+5,hr.h+5);
+    cx.strokeRect(hr.x-5.5,hr.y-5.5,hr.w+11,hr.h+11);
+    // Угловые маркеры (увеличенные)
     cx.fillStyle=P.YEL;
-    // Верхние углы
-    cx.fillRect(hr.x-3,hr.y-3,cn,1);cx.fillRect(hr.x-3,hr.y-3,1,cn);
-    cx.fillRect(hr.x+hr.w+3-cn,hr.y-3,cn,1);cx.fillRect(hr.x+hr.w+2,hr.y-3,1,cn);
-    // Нижние углы
-    cx.fillRect(hr.x-3,hr.y+hr.h+2,cn,1);cx.fillRect(hr.x-3,hr.y+hr.h+3-cn,1,cn);
-    cx.fillRect(hr.x+hr.w+3-cn,hr.y+hr.h+2,cn,1);cx.fillRect(hr.x+hr.w+2,hr.y+hr.h+3-cn,1,cn);
+    const cn=5;
+    cx.fillRect(hr.x-5,hr.y-5,cn,2);cx.fillRect(hr.x-5,hr.y-5,2,cn);
+    cx.fillRect(hr.x+hr.w+5-cn,hr.y-5,cn,2);cx.fillRect(hr.x+hr.w+3,hr.y-5,2,cn);
+    cx.fillRect(hr.x-5,hr.y+hr.h+3,cn,2);cx.fillRect(hr.x-5,hr.y+hr.h+5-cn,2,cn);
+    cx.fillRect(hr.x+hr.w+5-cn,hr.y+hr.h+3,cn,2);cx.fillRect(hr.x+hr.w+3,hr.y+hr.h+5-cn,2,cn);
     cx.globalAlpha=1;
   }else if(cur.hx!=null&&cur.hy!=null&&!cur.noRing){
-    const r=cur.hr||14;
-    cx.globalAlpha=0.3+0.2*Math.sin(T.t*0.15);
-    ring(cur.hx,cur.hy,r,P.YEL,1);
-    ring(cur.hx,cur.hy,r+3,P.YEL,1);
+    const r=cur.hr||16;
+    const pulse=0.25+0.18*Math.sin(T.t*0.18);
+    // Осветляющий диск внутри
+    cx.globalAlpha=0.28*fade;
+    disc(cur.hx,cur.hy,r,'#aaccff');
+    cx.globalAlpha=1;
+    // Пульсирующие кольца (3 уровня)
+    cx.globalAlpha=(0.55+pulse)*fade;
+    ring(cur.hx,cur.hy,r,P.YEL,2);
+    cx.globalAlpha=(0.35+pulse)*fade;
+    ring(cur.hx,cur.hy,r+5,P.YEL,1);
+    cx.globalAlpha=(0.2+pulse*0.5)*fade;
+    ring(cur.hx,cur.hy,r+10,P.YEL,1);
     cx.globalAlpha=1;
   }
 
-  // Стрелка к указываемому элементу
+  // Большая стрелка к указываемому элементу
   if(cur.hx!=null&&cur.hy!=null&&cur.arrow){
-    const off=Math.sin(T.t*0.12)*2;
+    const off=(Math.sin(T.t*0.14)*3)|0;
+    cx.globalAlpha=0.9*fade;
     cx.fillStyle=P.YEL;
     if(cur.arrow==='left'){
-      // указывает влево (от подсказки)
-      const ax=cur.hx+10+off,ay=cur.hy;
-      cx.fillRect(ax,ay-1,4,2);
-      cx.fillRect(ax,ay-2,2,1);cx.fillRect(ax,ay+1,2,1);
-      cx.fillRect(ax+1,ay-3,1,1);cx.fillRect(ax+1,ay+2,1,1);
+      const ax=(cur.hx+18+off)|0,ay=(cur.hy)|0;
+      // Хвост стрелки
+      cx.fillRect(ax+2,ay-1,8,3);
+      // Наконечник (указывает влево)
+      cx.fillRect(ax,ay-3,3,7);
+      cx.fillRect(ax+1,ay-4,2,1);cx.fillRect(ax+1,ay+4,2,1);
+      cx.fillRect(ax+2,ay-5,1,1);cx.fillRect(ax+2,ay+5,1,1);
     }else if(cur.arrow==='right'){
-      const ax=cur.hx-14-off,ay=cur.hy;
-      cx.fillRect(ax,ay-1,4,2);
-      cx.fillRect(ax+2,ay-2,2,1);cx.fillRect(ax+2,ay+1,2,1);
-      cx.fillRect(ax+3,ay-3,1,1);cx.fillRect(ax+3,ay+2,1,1);
+      const ax=(cur.hx-18-off)|0,ay=(cur.hy)|0;
+      cx.fillRect(ax-10,ay-1,8,3);
+      cx.fillRect(ax-3,ay-3,3,7);
+      cx.fillRect(ax-4,ay-4,2,1);cx.fillRect(ax-4,ay+4,2,1);
+      cx.fillRect(ax-5,ay-5,1,1);cx.fillRect(ax-5,ay+5,1,1);
     }else if(cur.arrow==='up'){
-      const ax=cur.hx,ay=cur.hy+10+off;
-      cx.fillRect(ax-1,ay,2,4);
-      cx.fillRect(ax-2,ay,1,2);cx.fillRect(ax+1,ay,1,2);
-      cx.fillRect(ax-3,ay+1,1,1);cx.fillRect(ax+2,ay+1,1,1);
+      const ax=(cur.hx)|0,ay=(cur.hy+18+off)|0;
+      cx.fillRect(ax-1,ay+2,3,8);
+      cx.fillRect(ax-3,ay,7,3);
+      cx.fillRect(ax-4,ay+1,1,2);cx.fillRect(ax+4,ay+1,1,2);
+      cx.fillRect(ax-5,ay+2,1,1);cx.fillRect(ax+5,ay+2,1,1);
     }else if(cur.arrow==='down'){
-      const ax=cur.hx,ay=cur.hy-14-off;
-      cx.fillRect(ax-1,ay,2,4);
-      cx.fillRect(ax-2,ay+2,1,2);cx.fillRect(ax+1,ay+2,1,2);
-      cx.fillRect(ax-3,ay+1,1,1);cx.fillRect(ax+2,ay+1,1,1);
+      const ax=(cur.hx)|0,ay=(cur.hy-18-off)|0;
+      cx.fillRect(ax-1,ay-10,3,8);
+      cx.fillRect(ax-3,ay-3,7,3);
+      cx.fillRect(ax-4,ay-4,1,2);cx.fillRect(ax+4,ay-4,1,2);
+      cx.fillRect(ax-5,ay-5,1,1);cx.fillRect(ax+5,ay-5,1,1);
     }
+    cx.globalAlpha=1;
   }
 
   // Облако с текстом
   const lines=Array.isArray(cur.text)?cur.text:[cur.text];
   let maxW=0;for(const l of lines)maxW=Math.max(maxW,gw(l));
-  const boxW=maxW+10,boxH=lines.length*8+8;
+  // Добавляем строку счётчика шагов внутрь текстбокса
+  const stepStr=(T.steps.length>1)?'ШАГИ '+(T.step+1)+'/'+T.steps.length:'';
+  const stepW=stepStr?gw(stepStr)+4:0;
+  const boxW=Math.max(maxW+10,stepW+10);
+  const boxH=lines.length*8+8+(stepStr?8:0);
   let bx=cur.tx!=null?cur.tx:(LW-boxW)/2;
-  let by=cur.ty!=null?cur.ty:LH-boxH-26;
+  let by=cur.ty!=null?cur.ty:LH-boxH-20;
   bx=Math.max(2,Math.min(LW-boxW-2,bx));
-  by=Math.max(20,Math.min(LH-boxH-2,by));
+  by=Math.max(16,Math.min(LH-boxH-2,by));
   bx=bx|0;by=by|0;
 
-  // Появление с лёгким fade-in
-  const fade=Math.min(1,T.t/15);
   cx.globalAlpha=fade;
   bx2(bx,by,boxW,boxH,'#001833',P.YEL,1);
-  rc(bx+1,by+1,boxW-2,1,'#33aacc');  // верхняя планка
+  // Цветная шапка
+  rc(bx+1,by+1,boxW-2,3,'#004466');
+  rc(bx+1,by+1,boxW-2,1,'#33aacc');
   for(let i=0;i<lines.length;i++){
-    txs(lines[i],bx+5,by+4+i*8,P.WHT,P.BLK,1);
+    txs(lines[i],bx+5,by+5+i*8,P.WHT,P.BLK,1);
+  }
+  // Счётчик шагов внизу текстбокса
+  if(stepStr){
+    const sy=by+boxH-7;
+    rc(bx+1,sy-1,boxW-2,1,'#002244');
+    txs(stepStr,bx+5,sy,P.UIT3,P.BLK,1);
   }
   cx.globalAlpha=1;
 
-  // Подсказка в углу — "тап продолжить"
-  if(T.t>30&&Math.floor(T.t/22)%2){
+  // Мигающая подсказка управления
+  if(T.t>25&&Math.floor(T.t/20)%2){
     const m=USE_TOUCH_UI?'ТАП':'ENTER';
     const isLast=T.step>=T.steps.length-1;
     const action=isLast?'ЗАКРЫТЬ':'ДАЛЬШЕ';
-    txcs(m+' - '+action,LH-5,P.UIT3,P.BLK,1);
-  }
-
-  // Прогресс шагов (точки внизу слева)
-  for(let i=0;i<T.steps.length;i++){
-    const dx=4+i*5,dy=LH-5;
-    rc(dx,dy,3,3,i===T.step?P.YEL:'#333344');
+    cx.globalAlpha=0.8;
+    txcs(m+' — '+action,LH-4,P.UIT2,P.BLK,1);
+    cx.globalAlpha=1;
   }
 }
 // ======= /ТУТОРИАЛ =======
