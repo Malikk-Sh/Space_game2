@@ -1143,7 +1143,7 @@ function updPlanetBubblika(G){
     const backPad=B.pads.find(pp=>pp.iIdx===pad.to&&pp.to===pad.iIdx);
     const tx=backPad?backPad.x:(targetIsland.x+targetIsland.w/2);
     B.flying={t:0,dur:30,sx:pc.x,sy:pc.y,tx,ty:targetIsland.y-1,toIdx:pad.to};
-    spPts(pc.x,pc.y,8,[P.BUB3,P.CYA,P.WHT],.4,2,14);shake(1.5);
+    sfxUI2();spPts(pc.x,pc.y,8,[P.BUB3,P.CYA,P.WHT],.4,2,14);shake(1.5);
     return;
   }
 

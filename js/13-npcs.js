@@ -223,8 +223,8 @@ function drwNPC(n,pcx,pcy,t){
   const walkPhase=n.walking&&n._wWait<=0;
   // Blab бежит — быстрее анимация ног и подскок
   const legCycle=isRunner?5:8;
-  // ★ Увеличенная амплитуда шага: раньше ±3/±2 — почти незаметно. Теперь шаг хорошо виден.
-  const legOff=walkPhase?(Math.floor(t/legCycle)%2)*(isRunner?5:4):0;
+  // legOff: 0 или 1 — поочерёдный подъём ног (Y-боб). Zorp использует tlegOff*2 внутри drwNPC_Zorp.
+  const legOff=walkPhase?(Math.floor(t/legCycle)%2):0;
   // Подскок при беге
   const runBob=(walkPhase&&isRunner)?Math.sin(t*0.4)*1:0;
   const x=n.x|0;
@@ -282,17 +282,17 @@ function drwNPC_Generic(x,y,t,facing,blink,walking,legOff,col){
   if(!blink){cx.fillRect(x-1+(facing>0?0:0),y-13,1,2);cx.fillRect(x+1,y-13,1,2);}
   else{cx.fillRect(x-1,y-12,1,1);cx.fillRect(x+1,y-12,1,1);}
   cx.fillRect(x-1,y-10,3,1);
-  // Ноги
+  // Ноги — поочерёдный Y-подъём
   cx.fillStyle='#334455';
-  cx.fillRect(x-3+legOff,y,3,2);
-  cx.fillRect(x+1-legOff,y,3,2);
+  cx.fillRect(x-3,y-legOff,3,2);
+  cx.fillRect(x+1,y-(1-legOff),3,2);
 }
 
 // КЛИРР — комендант в военной форме с фуражкой
 function drwNPC_Klirr(x,y,t,f,blink,walking,legOff){
-  // Ноги в сапогах
-  rc(x-3+legOff,y,3,3,'#222');rc(x+1-legOff,y,3,3,'#222');
-  rc(x-3+legOff,y+2,3,1,'#554422');rc(x+1-legOff,y+2,3,1,'#554422'); // сапоги
+  // Ноги в сапогах — поочерёдный Y-подъём
+  rc(x-3,y-legOff,3,3,'#222');rc(x+1,y-(1-legOff),3,3,'#222');
+  rc(x-3,y+2-legOff,3,1,'#554422');rc(x+1,y+2-(1-legOff),3,1,'#554422');
   // Тёмно-зелёная форма с поясом
   rc(x-4,y-9,9,9,'#3a5c3a');rc(x-4,y-1,9,1,'#1a2a1a');// пояс
   rc(x-4,y-9,9,1,'#557755');// плечи светлее
@@ -315,11 +315,12 @@ function drwNPC_Klirr(x,y,t,f,blink,walking,legOff){
 
 // ЗОРП — спортсмен в трико с повязкой и часами
 function drwNPC_Zorp(x,y,t,f,blink,walking,legOff){
-  // Ноги — длинные, в кроссовках
-  rc(x-3+legOff,y,3,3,'#1a2a4a');// шорты-низ
-  rc(x+1-legOff,y,3,3,'#1a2a4a');
-  rc(x-3+legOff,y+2,3,1,'#ddffff');// кроссовки
-  rc(x+1-legOff,y+2,3,1,'#ddffff');
+  // Ноги — длинные, в кроссовках. Zorp-бегун: шаг 2px
+  const zo=legOff*2;
+  rc(x-3,y-zo,3,3,'#1a2a4a');
+  rc(x+1,y-(2-zo),3,3,'#1a2a4a');
+  rc(x-3,y+2-zo,3,1,'#ddffff');
+  rc(x+1,y+2-(2-zo),3,1,'#ddffff');
   // Спортивная майка с номером
   rc(x-3,y-9,7,8,'#3399ff');// синяя
   rc(x-3,y-3,7,1,'#1a2a4a');
@@ -341,9 +342,9 @@ function drwNPC_Zorp(x,y,t,f,blink,walking,legOff){
 
 // КРОК — пожилой астроном с очками и блокнотом
 function drwNPC_Krok(x,y,t,f,blink,walking,legOff){
-  // Ноги в сандалиях
-  rc(x-3+legOff,y,3,3,'#664422');rc(x+1-legOff,y,3,3,'#664422');
-  rc(x-3+legOff,y+2,3,1,'#886633');rc(x+1-legOff,y+2,3,1,'#886633'); // подошвы
+  // Ноги в сандалиях — поочерёдный Y-подъём
+  rc(x-3,y-legOff,3,3,'#664422');rc(x+1,y-(1-legOff),3,3,'#664422');
+  rc(x-3,y+2-legOff,3,1,'#886633');rc(x+1,y+2-(1-legOff),3,1,'#886633');
   // Серая роба учёного
   rc(x-4,y-9,9,9,'#aaaaaa');rc(x-4,y-9,9,1,'#888888');
   // Карман с блокнотом
@@ -369,9 +370,9 @@ function drwNPC_Krok(x,y,t,f,blink,walking,legOff){
 
 // БЛАБ — изобретатель в комбинезоне с гаечным ключом
 function drwNPC_Blab(x,y,t,f,blink,walking,legOff){
-  // Ноги в рабочих сапогах
-  rc(x-3+legOff,y,3,3,'#332211');rc(x+1-legOff,y,3,3,'#332211');
-  rc(x-3+legOff,y+2,3,1,'#ffcc44');rc(x+1-legOff,y+2,3,1,'#ffcc44');
+  // Ноги в рабочих сапогах — поочерёдный Y-подъём
+  rc(x-3,y-legOff,3,3,'#332211');rc(x+1,y-(1-legOff),3,3,'#332211');
+  rc(x-3,y+2-legOff,3,1,'#ffcc44');rc(x+1,y+2-(1-legOff),3,1,'#ffcc44');
   // Жёлтый комбинезон
   rc(x-4,y-9,9,9,'#ddaa33');rc(x-4,y-9,9,1,'#eebb44');
   // Лямки и пуговицы
@@ -436,9 +437,9 @@ function drwNPC_Pfft(x,y,t,f,blink,walking,legOff){
 
 // МРАУ — капитан в военной униформе с нашивками, рядом кошка
 function drwNPC_Mrau(x,y,t,f,blink,walking,legOff){
-  // Ноги в военных ботинках
-  rc(x-3+legOff,y,3,3,'#1a1a1a');rc(x+1-legOff,y,3,3,'#1a1a1a');
-  rc(x-3+legOff,y+2,3,1,'#332211');rc(x+1-legOff,y+2,3,1,'#332211');
+  // Ноги в военных ботинках — поочерёдный Y-подъём
+  rc(x-3,y-legOff,3,3,'#1a1a1a');rc(x+1,y-(1-legOff),3,3,'#1a1a1a');
+  rc(x-3,y+2-legOff,3,1,'#332211');rc(x+1,y+2-(1-legOff),3,1,'#332211');
   // Камуфляжный комбинезон
   rc(x-4,y-9,9,9,'#665533');rc(x-4,y-9,9,1,'#887744');
   // Камуфляжные пятна
@@ -482,8 +483,8 @@ function drwNPC_Mrau(x,y,t,f,blink,walking,legOff){
 
 // КРУЗ — бородатый старожил в пыльнике и шляпе
 function drwNPC_Kruz(x,y,t,f,blink,walking,legOff){
-  // Ноги в пыльных ботинках
-  rc(x-3+legOff,y,3,3,'#553322');rc(x+1-legOff,y,3,3,'#553322');
+  // Ноги в пыльных ботинках — поочерёдный Y-подъём
+  rc(x-3,y-legOff,3,3,'#553322');rc(x+1,y-(1-legOff),3,3,'#553322');
   // Пыльник коричневый
   rc(x-5,y-9,11,10,'#886644');rc(x-5,y-9,11,1,'#aa8866');
   rc(x-5,y-1,11,1,'#664422');// низ темнее

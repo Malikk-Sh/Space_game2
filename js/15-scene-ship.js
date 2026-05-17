@@ -964,7 +964,7 @@ function startTinaBattle(G){
   // ★ v16 r3: Тина в центре нового большого мира (для 3x масштаба)
   G.finale.tina={
     x:G.finale.hx,y:G.finale.hy,
-    hp:750,mhp:750,
+    hp:938,mhp:938,
     phase:1,
     subphase:'1',  // ★ Phase 2.3: '1' | '1.5' | '2' | '2.5' | '3' | '3.5' | '4'
     t:0,defeated:false,
