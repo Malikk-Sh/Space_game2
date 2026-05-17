@@ -104,7 +104,7 @@ function _startBurst(G,p,w){
   shake(2);
 }
 
-function initSpace(G){saveCheckpoint(G,'space');TAP_FIRE=true;ALLOW_JOY=true;Object.assign(G,{state:'space',asts:[],buls:[],rits:[],enms:[],ebuls:[],pups:[],spaceAliens:[],sT:0,prog:0,appr:false,landT:0,astST:40,enmST:240,combo:0,comboT:0,transIn:60,landingTriggered:false,_minibossSpawned:false,_sniperAlive:false});Object.assign(G.pl,{x:50,y:LH/2,vx:0,vy:0,inv:0,boost:0,squash:0,drift:0,boostWas:false,wep:Math.min(2,G.pl.wep||1),burstQueue:0,burstNext:0,_beamDepleted:false});
+function initSpace(G){saveCheckpoint(G,'space');TAP_FIRE=true;ALLOW_JOY=true;Object.assign(G,{state:'space',asts:[],buls:[],rits:[],enms:[],ebuls:[],pups:[],spaceAliens:[],sT:0,prog:0,appr:false,landT:0,astST:40,enmST:240,combo:0,comboT:0,transIn:60,landingTriggered:false,_minibossSpawned:false,_sniperAlive:false,_alienQuota:3+((Math.random()*3)|0),_aliensSpawned:0,_alienNextProg:0.1+Math.random()*0.15});Object.assign(G.pl,{x:50,y:LH/2,vx:0,vy:0,inv:0,boost:0,squash:0,drift:0,boostWas:false,wep:Math.min(2,G.pl.wep||1),burstQueue:0,burstNext:0,_beamDepleted:false});
 // ★ Миграция: если wepIdx ещё не задан, выводим из legacy p.wep (1→0 L1, 2→3 L2)
 if(G.pl.wepIdx==null)G.pl.wepIdx=(G.pl.wep===2?3:0);
 // Сброс на L1, если выбран недоступный слот (после загрузки старого сейва)
@@ -775,13 +775,12 @@ function updSpace(G){
     if(pu.x<wbLeft||pu.lf<=0)G.pups.splice(i,1);
   }
 
-  // Дрейфующие пришельцы — редкие встречи в космосе, можно подобрать как рабочего
+  // Дрейфующие пришельцы — по одному на протяжении перелёта, всего 3-5 за рейс
   if(!G.spaceAliens)G.spaceAliens=[];
-  if(G.sT%1800===0&&G.spaceAliens.length===0&&G.prog>0.05&&G.prog<0.92){
-    const cnt=3+((Math.random()*3)|0); // 3, 4 или 5
-    for(let ci=0;ci<cnt;ci++){
-      G.spaceAliens.push({x:LW+8+ci*22,y:20+Math.random()*(LH-40),vx:-0.3-Math.random()*0.2,vy:(Math.random()-.5)*0.15,t:0});
-    }
+  if(G._aliensSpawned<(G._alienQuota||4)&&G.prog>=G._alienNextProg&&G.prog<0.92){
+    G.spaceAliens.push({x:LW+8,y:20+Math.random()*(LH-40),vx:-0.3-Math.random()*0.2,vy:(Math.random()-.5)*0.15,t:0});
+    G._aliensSpawned++;
+    G._alienNextProg=G.prog+0.15+Math.random()*0.2;
   }
   for(let i=G.spaceAliens.length-1;i>=0;i--){
     const al=G.spaceAliens[i];
