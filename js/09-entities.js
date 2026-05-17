@@ -509,8 +509,8 @@ function drwTinaBoss(b){
     ring(x,y,TINA_R+2,P.WHT,1);
     cx.globalAlpha=1;
   }
-  // Слабые места в фазе 3 — теперь это БРЕШИ В ЩИТЕ
-  if(b.phase===3 && b.weakSpots){
+  // Слабые места в фазе 3 и 4 (ярость) — БРЕШИ В ЩИТЕ
+  if((b.phase===3||b.phase===4) && b.weakSpots){
     drwShieldWithBreaches(b,t);
   }
   // Энергоблоки в фазе 1

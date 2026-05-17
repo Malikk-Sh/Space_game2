@@ -310,7 +310,6 @@ function drwShipView(G){
     {unbuilt:!inv.spreadUnlocked,  label:'СПРЕД',  short:'СПРЕД',  cost:30,  matCost:0, id:'spread'},
     {unbuilt:!inv.missileUnlocked, label:'РАКЕТА', short:'РАКЕТА', cost:50,  matCost:1, id:'missile'},
     {unbuilt:!inv.beamUnlocked,    label:'ЛУЧ',    short:'ЛУЧ',    cost:80,  matCost:1, id:'beam'},
-    {unbuilt:!inv.burstUnlocked,   label:'БЁРСТ',  short:'БЁРСТ',  cost:100, matCost:2, id:'burst'},
   ];
   const _workshopNext=_workshopItems.find(i=>i.unbuilt&&!_queuedIds.has(i.id));
   let workshopHint='';
@@ -355,7 +354,7 @@ function drwShipView(G){
     {col:0,row:1,id:'workshop',name:'ВЕРСТАК',col2:P.GRN,
      // ★ PR C: верстак — индикатор + клик открывает отдельный экран мастерской.
      hint:(G.ship.craftQueue&&G.ship.craftQueue.length>0
-       ? 'В РАБОТЕ: '+G.ship.craftQueue[0].short+' ('+((G.ship.craftQueue[0].progress/G.ship.craftQueue[0].total*100)|0)+'%)'
+       ? G.ship.craftQueue[0].short+': '+((G.ship.craftQueue[0].progress/G.ship.craftQueue[0].total*100)|0)+'%'
        : 'ОТКРЫТЬ →'),
      status:workshopStatus,
      action:(G)=>{G.shipUI='workshop';sfxUI2();},
@@ -525,13 +524,13 @@ function drwShipView(G){
   const scCol=inv.shieldBuilt?P.GRN:(inv.bubblikaContract?P.YEL:'#445566');
   const scMark=inv.shieldBuilt?'V':(inv.bubblikaContract?'?':'-');
   txs(scMark+' ЩИТ',panelX+3,py,scCol,P.BLK,1);py+=7;
-  // Звёздная батарея
-  const btCol=inv.starBattery?P.YEL:'#445566';
-  const btMark=inv.starBattery?'*':'-';
-  txs(btMark+' БАТАРЕЯ',panelX+3,py,btCol,P.BLK,1);
-  if(inv.starBattery){
+  // Энергощит
+  const btCol=inv.energyShield?P.CYA:'#445566';
+  const btMark=inv.energyShield?'*':'-';
+  txs(btMark+' ЭНЕРГОЩИТ',panelX+3,py,btCol,P.BLK,1);
+  if(inv.energyShield){
     cx.globalAlpha=.4+.3*Math.sin(G.shipT*.15);
-    rc(panelX+3,py-1,panelW-7,7,'#332200');
+    rc(panelX+3,py-1,panelW-7,7,'#001a33');
     cx.globalAlpha=1;
   }
 
@@ -1048,10 +1047,6 @@ function _completeCraft(G,item){
       inv.beamUnlocked=true;
       rewards.push({label:'ЛУЧ — НЕПРЕРЫВНЫЙ',col:P.L2});
       glowCol=P.L2; break;
-    case 'burst':
-      inv.burstUnlocked=true;
-      rewards.push({label:'БЁРСТ — ОЧЕРЕДЬ 5 ПУЛЬ',col:P.YEL});
-      glowCol=P.YEL; break;
   }
   showQuestReward(G,'КРАФТ ЗАВЕРШЁН',rewards,glowCol);
   sfxPU();setTimeout(sfxUI2,80);setTimeout(sfxPU,160);
@@ -1141,7 +1136,6 @@ function _workshopItems(G){
     {id:'spread', label:'СПРЕД',   cost:30, matCost:0, total:300, have:inv.spreadUnlocked},
     {id:'missile',label:'РАКЕТА',  cost:50, matCost:1, total:600, have:inv.missileUnlocked},
     {id:'beam',   label:'ЛУЧ',     cost:80, matCost:1, total:840, have:inv.beamUnlocked},
-    {id:'burst',  label:'БЁРСТ',   cost:100,matCost:2, total:960, have:inv.burstUnlocked},
   ];
 }
 
@@ -1246,6 +1240,19 @@ function _buyUpgrade(G,upgradeId){
 }
 
 function updShipWorkshop(G){
+  // Tutorial on first visit
+  if(!G.campaignState.flags.tutWorkshopShown){
+    G.campaignState.flags.tutWorkshopShown=true;
+    setTimeout(()=>{
+      if(G.shipUI!=='workshop')return;
+      startTutorial(G,[
+        {text:['МАСТЕРСКАЯ:','СОЗДАВАЙ ОРУЖИЕ','И АПГРЕЙДЫ КОРАБЛЯ.'],tx:LW/2-80,ty:LH/2-22},
+        {text:['ЛЕВАЯ КОЛОНКА — ОРУЖИЕ:','ТАП ПО КАРТОЧКЕ —','НАЧАТЬ КРАФТ.','ПРОГРЕСС ИДЁТ В ПОЛЁТЕ.'],tx:LW/2-80,ty:60},
+        {text:['ПРАВАЯ КОЛОНКА — АПГРЕЙДЫ:','ПОСТОЯННЫЕ БОНУСЫ К КОРАБЛЮ.','СТОЯТ КРЕДИТЫ + РЕСУРСЫ.'],tx:LW/2-80,ty:60},
+        {text:['ВВЕРХУ — ОЧЕРЕДЬ КРАФТА.','ПОСТАВЬ ПРЕДМЕТ В ОЧЕРЕДЬ —','ОН СТРОИТСЯ ПОКА ЛЕТИШЬ.'],tx:LW/2-80,ty:LH/2-22},
+      ]);
+    },100);
+  }
   // Tab/back обрабатывается в updShip (возврат на main)
   if(mC){
     const hits=G._shipSubHits||[];
@@ -1285,29 +1292,28 @@ function drwShipWorkshop(G){
   rc(12,1,42,13,'#1a4a2a');rc(12,13,42,1,P.GRN);
   txs('< НАЗАД',16,5,P.GRN,P.BLK,1);
   txcs('МАСТЕРСКАЯ',5,P.GRN,P.BLK,1);
-  // Ресурсы справа в рамке
-  const crTxt='КР: '+G.pl.cr;
-  const matTxt='МАТ: '+(G.campaignState.materials||0);
-  txs(crTxt,LW-gw(crTxt)-gw(matTxt)-8,5,P.YEL,P.BLK,1);
+  // Ресурсы справа — КР / РЕС / МАТ в одной строке
+  const crTxt='КР:'+G.pl.cr;
+  const resTxt='РЕС:'+G.pl.res;
+  const matTxt='МАТ:'+(G.campaignState.materials||0);
+  const _rw=gw(crTxt)+gw(resTxt)+gw(matTxt)+10;
+  txs(crTxt,LW-_rw,5,P.YEL,P.BLK,1);
+  txs(resTxt,LW-_rw+gw(crTxt)+4,5,P.RES,P.BLK,1);
   txs(matTxt,LW-gw(matTxt)-3,5,P.CYA,P.BLK,1);
 
-  // ===== ОЧЕРЕДЬ (улучшенный вид) =====
+  // ===== ОЧЕРЕДЬ (компактная однострочная полоса) =====
   let py=20;
   if(G.ship.craftQueue&&G.ship.craftQueue.length>0){
     const cq=G.ship.craftQueue[0];
     const pct=cq.progress/cq.total;
     const pctInt=(pct*100)|0;
-    // Карточка прогресса с цветной полосой
-    rc(4,py,LW-8,18,'#0a3018');
-    rc(5,py+1,LW-10,16,'#031810');
-    rc(5,py+1,2,16,P.CYA);
-    txs('В РАБОТЕ',9,py+2,P.CYA,P.BLK,1);
-    txs(cq.short,9,py+10,P.WHT,P.BLK,1);
-    txs(pctInt+'%',LW-gw(pctInt+'%')-9,py+2,P.CYA,P.BLK,1);
-    bar(LW-72,py+10,60,4,pct,P.CYA,'#001122');
-    py+=22;
+    rc(4,py,LW-8,12,'#0a2414');
+    rc(5,py+1,2,10,P.CYA);
+    txs('КРАФТ: '+cq.short+' '+pctInt+'%',9,py+3,P.CYA,P.BLK,1);
+    bar(LW-52,py+4,42,4,pct,P.CYA,'#001122');
+    py+=14;
     if(G.ship.craftQueue.length>1){
-      txs('+ '+(G.ship.craftQueue.length-1)+' В ОЧЕРЕДИ',6,py,P.DIM,P.BLK,1);py+=8;
+      txs('+'+(G.ship.craftQueue.length-1)+' ЕЩЁ В ОЧ.',6,py,P.DIM,P.BLK,1);py+=8;
     }
   } else {
     cx.globalAlpha=.5;
@@ -1324,10 +1330,10 @@ function drwShipWorkshop(G){
   const items=_workshopItems(G);
   const queued=new Set((G.ship.craftQueue||[]).map(c=>c.id));
   G._shipSubHits=[];
-  const cardH=18,cardMargin=2;
+  const cardH=22,cardMargin=2;
   // Column headers
   txs('ОРУЖИЕ:',leftX+2,py,P.UIT2,P.BLK,1);
-  txs('АПГРЕЙДЫ (РЕС:'+G.pl.res+'):',rightX+2,py,P.PUR,P.BLK,1);
+  txs('АПГРЕЙДЫ:',rightX+2,py,P.PUR,P.BLK,1);
   py+=9;
   // Pre-build arrays for both columns
   const upgrades=_upgradeItems(G);
@@ -1345,10 +1351,10 @@ function drwShipWorkshop(G){
       else{const hc=G.pl.cr,hm=G.campaignState.materials||0;if(hc<item.cost||hm<item.matCost){frame='#aa8822';bg='#1f1808';btn='!';btnCol=P.YEL;btnBg='#2a1f08';}}
       rc(cardX,cardY,cardW,cardH,frame);rc(cardX+1,cardY+1,cardW-2,cardH-2,bg);
       rc(cardX+1,cardY+1,3,cardH-2,frame);
-      txs(item.label,cardX+6,cardY+3,nameCol,P.BLK,1);
-      if(item.lock)txs(item.lockHint,cardX+6,cardY+10,'#aa6655',P.BLK,1);
-      else txs(item.cost+'КР'+(item.matCost>0?'+'+item.matCost+'М':''),cardX+6,cardY+10,P.YEL,P.BLK,1);
-      const btnW=gw(btn)+6,btnX=cardX+cardW-btnW-2,btnY=cardY+4;
+      txs(item.label,cardX+6,cardY+4,nameCol,P.BLK,1);
+      if(item.lock)txs(item.lockHint,cardX+6,cardY+13,'#aa6655',P.BLK,1);
+      else txs(item.cost+'КР'+(item.matCost>0?'+'+item.matCost+'М':''),cardX+6,cardY+13,P.YEL,P.BLK,1);
+      const btnW=gw(btn)+6,btnX=cardX+cardW-btnW-2,btnY=cardY+6;
       const hover=!USE_TOUCH_UI&&mX>=cardX&&mX<=cardX+cardW&&mY>=cardY&&mY<=cardY+cardH;
       if(hover&&!item.have&&!item.lock&&!queued.has(item.id)){cx.globalAlpha=.4;rc(cardX+1,cardY+1,cardW-2,cardH-2,frame);cx.globalAlpha=1;}
       rc(btnX,btnY,btnW,10,btnBg);rc(btnX,btnY,btnW,1,btnCol);rc(btnX,btnY+9,btnW,1,btnCol);
@@ -1365,21 +1371,36 @@ function drwShipWorkshop(G){
       const btn=affordable?'КУП':'!',btnCol=affordable?up.col:P.YEL,btnBg=affordable?'#1a1830':'#2a1f08';
       rc(cardX,cardY,cardW,cardH,frame);rc(cardX+1,cardY+1,cardW-2,cardH-2,bg);
       rc(cardX+1,cardY+1,3,cardH-2,up.col);
-      txs(up.label+' '+up.lvl+'/'+up.maxLvl,cardX+6,cardY+3,affordable?P.WHT:'#aa8866',P.BLK,1);
-      txs(up.effect,cardX+6,cardY+10,up.col,P.BLK,1);
-      const btnW=gw(btn)+6,btnX=cardX+cardW-btnW-2,btnY=cardY+4;
+      txs(up.label+' '+up.lvl+'/'+up.maxLvl,cardX+6,cardY+4,affordable?P.WHT:'#aa8866',P.BLK,1);
+      txs(up.effect,cardX+6,cardY+12,up.col,P.BLK,1);
+      const btnW=gw(btn)+6,btnX=cardX+cardW-btnW-2,btnY=cardY+6;
       rc(btnX,btnY,btnW,10,btnBg);rc(btnX,btnY,btnW,1,btnCol);rc(btnX,btnY+9,btnW,1,btnCol);
       txs(btn,btnX+3,btnY+2,btnCol,P.BLK,1);
-      txs(up.cost+'К+'+up.res+'Р',cardX+cardW-gw(up.cost+'К+'+up.res+'Р')-2,cardY+15,affordable?P.YEL:'#aa6655',P.BLK,1);
+      txs(up.cost+'К+'+up.res+'Р',cardX+cardW-gw(up.cost+'К+'+up.res+'Р')-2,cardY+16,affordable?P.YEL:'#aa6655',P.BLK,1);
       if(affordable)G._shipSubHits.push({x:cardX,y:cardY,w:cardW,h:cardH,upgradeId:up.id});
     }
   }
+  drwTutorial(G);
+  drawTrans();
 }
 
 // ============================================================
 // ЭКРАН РАБОЧИХ
 // ============================================================
 function updShipWorkers(G){
+  // Tutorial on first visit
+  if(!G.campaignState.flags.tutWorkersShown){
+    G.campaignState.flags.tutWorkersShown=true;
+    setTimeout(()=>{
+      if(G.shipUI!=='workers')return;
+      startTutorial(G,[
+        {text:['РАСПРЕДЕЛЕНИЕ РАБОЧИХ:','ПЕРЕМЕСТИ РАБОЧИХ ПО ОТСЕКАМ','ЧТОБЫ УСИЛИТЬ НУЖНЫЕ ФУНКЦИИ.'],tx:LW/2-90,ty:LH/2-22},
+        {text:['ЭЛЕКТРОСТАНЦИЯ:','РАБОЧИЕ ЗДЕСЬ БЫСТРЕЕ','ВОССТАНАВЛИВАЮТ ЭНЕРГИЮ КОРАБЛЯ.'],tx:LW/2-90,ty:28},
+        {text:['МАСТЕРСКАЯ:','РАБОЧИЕ ЗДЕСЬ УСКОРЯЮТ КРАФТ.','БЕЗ НИХ КРАФТ ОСТАНОВЛЕН.'],tx:LW/2-90,ty:28},
+        {text:['НАЖИМАЙ + / -','ЧТОБЫ ПЕРЕМЕСТИТЬ РАБОЧЕГО','МЕЖДУ ОТСЕКАМИ.'],tx:LW/2-90,ty:LH/2-22},
+      ]);
+    },100);
+  }
   if(mC){
     const hits=G._shipSubHits||[];
     for(const h of hits){
@@ -1413,7 +1434,7 @@ function drwShipWorkers(G){
   G._shipSubHits=[];
   const rooms=[
     {id:'power',name:'ЭЛЕКТРОСТАНЦИЯ',col:P.EN,
-      effect:'+'+(w.power*0.18).toFixed(2)+' ЭНЕРГИИ/КАДР'},
+      effect:'+'+(w.power*0.144).toFixed(3)+' ЭНЕРГИИ/КАДР'},
     {id:'fuel',name:'ТОПЛИВО',col:P.RES,
       effect:(w.fuel>0?'-'+(w.fuel*5)+'% РАСХОДА':'НЕТ ЭФФЕКТА')},
     {id:'bridge',name:'МОСТИК',col:P.UIT,
@@ -1459,6 +1480,8 @@ function drwShipWorkers(G){
   // ===== ИТОГ =====
   py+=2;
   txcs('+/- ПЕРЕНОСИТ РАБОЧЕГО МЕЖДУ ОТСЕКАМИ',py,P.UIT2,P.BLK,1);
+  drwTutorial(G);
+  drawTrans();
 }
 
 // ============================================================
@@ -1486,6 +1509,18 @@ function _mapIsUnlocked(G,planetId){
 }
 
 function updShipMap(G){
+  // Tutorial on first visit
+  if(!G.campaignState.flags.tutMapShown){
+    G.campaignState.flags.tutMapShown=true;
+    setTimeout(()=>{
+      if(G.shipUI!=='map')return;
+      startTutorial(G,[
+        {text:['НАВИГАЦИОННАЯ КАРТА:','ПОКАЗЫВАЕТ ВСЮ СИСТЕМУ','И ТЕКУЩУЮ ЦЕЛЬ ПОЛЁТА.'],tx:LW/2-90,ty:LH/2-22},
+        {text:['ЖЁЛТОЕ КОЛЬЦО = ЦЕЛЬ МАРШРУТА.','БЕЛОЕ КОЛЬЦО = ТВОЯ ПОЗИЦИЯ.','ИКОНКА КОРАБЛЯ = ТЫ.'],tx:LW/2-90,ty:LH/2-22},
+        {text:['ТАП ПО ПЛАНЕТЕ —','ИЗМЕНИТЬ КУРС.','СЕРЫЕ = ЕЩЁ НЕ ОТКРЫТЫ.'],tx:LW/2-90,ty:LH/2-22},
+      ]);
+    },100);
+  }
   if(mC){
     const hits=G._shipSubHits||[];
     for(const h of hits){
@@ -1648,4 +1683,6 @@ function drwShipMap(G){
     rc(shx+2,shy-1,2,1,P.SH1);
     rc(shx-3,shy,1,1,P.TH1);
   }
+  drwTutorial(G);
+  drawTrans();
 }
