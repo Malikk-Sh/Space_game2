@@ -13,10 +13,10 @@
 // ============================================================
 const WEAPONS=[
   {id:'l1',     idx:0, name:'ЛАЗЕР L1', short:'L1', dmg:2,    en:15, cd:7,  kind:'simple',  col:P.L1,  lv:1, vx:7, range:52, legacyWep:1},
-  {id:'spread', idx:1, name:'СПРЕД',     short:'SPR',dmg:1,    en:14, cd:14, kind:'spread',  col:P.L1L, lv:1, vx:6, range:40, legacyWep:1},
+  {id:'spread', idx:1, name:'СПРЕД',     short:'SPR',dmg:1,    en:18, cd:14, kind:'spread',  col:P.L1L, lv:1, vx:6, range:40, legacyWep:1},
   {id:'missile',idx:2, name:'РАКЕТА',    short:'MSL',dmg:5,    en:50, cd:30, kind:'missile', col:P.ORA, lv:1, vx:3, range:90, legacyWep:1},
   {id:'l2',     idx:3, name:'ЛАЗЕР L2', short:'L2', dmg:10,   en:66, cd:28, kind:'simple',  col:P.L3,  lv:3, vx:5, range:40, legacyWep:2},
-  {id:'beam',   idx:4, name:'ЛУЧ',       short:'BMM',dmg:0.17, en:2,  cd:0,  kind:'beam',    col:P.L2,  lv:1, vx:14,range:24, legacyWep:2},
+  {id:'beam',   idx:4, name:'ЛУЧ',       short:'BMM',dmg:0.25, en:2,  cd:0,  kind:'beam',    col:P.L2,  lv:1, vx:14,range:24, legacyWep:2},
 ];
 
 // Разблокировано ли оружие по индексу WEAPONS
@@ -251,7 +251,7 @@ function updSpace(G){
   else if(sh.fuel<30&&G.sT%500===0){G.notif='ТОПЛИВО КОНЧАЕТСЯ... ОСТАЛОСЬ: '+Math.floor(sh.fuel)+'%';G.notifT=90;G.notifCol=P.ORA;}
   // Power-room регенерирует энергию (1 рабочий = +0.18 EN/кадр); вдвое медленнее без топлива
   // Лимит убран — энергия накапливается свободно (механика без ограничения звёздной батареи)
-  p.en=Math.min(9999,p.en+.18*(sh.fuel<=0?0.5:1)*_sw.power);
+  p.en=Math.min(9999,p.en+.225*(sh.fuel<=0?0.5:1)*_sw.power);
   // Workshop workers passively repair ship hull (0.01 HP/frame per worker)
   if(_sw.workshop>0)p.hp=Math.min(p.mhp,p.hp+_sw.workshop*0.01);
   // Workshop-room продвигает крафт-очередь (1 рабочий = +1 ед/кадр)
@@ -288,8 +288,6 @@ function updSpace(G){
     }
     scrollStars(3+t*.045);
     // ★ Phase 4.4: эффект приближения — низкий рык на старте, шиммер при пересечении границы атмосферы.
-    if(t===5)sfxAtmosphereEnter();
-    if(t===55)sfxLand();
     if(t===120){
       const pInfo=PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh;
       flash(.35,pInfo.approachCol||P.CYA);
@@ -792,15 +790,6 @@ function updSpace(G){
     al.x+=al.vx;al.y+=al.vy;al.t++;
     const dx=p.x-al.x,dy=p.y-al.y,d=Math.hypot(dx,dy);
     if(d<70){al.vx+=dx/d*0.22;al.vy+=dy/d*0.22;}
-    // Пуля отталкивает пришельца (чтобы случайно не убили нажатием огня)
-    for(const b of G.buls){
-      const bdx=al.x-b.x,bdy=al.y-b.y,bd=Math.hypot(bdx,bdy);
-      if(bd<12){
-        const force=0.25+Math.random()*0.15;
-        al.vx+=(bdx/bd||0)*force;al.vy+=(bdy/bd||0)*force;
-        spPts(al.x,al.y,3,[P.PUR,'#aaeeff'],0.3,1.0,6,0.01);
-      }
-    }
     if(d<12){
       G.pl.workers++;
       addWorkerToShip(G);
@@ -1008,21 +997,6 @@ function drwSpace(G){rc(0,0,LW,LH,P.BG);applyShake();drwNebula();drwStars();
     drwShip(G.pl.x,G.pl.y,G.pl.inv,G.pl.thrT,G.pl.boost>0,G.pl.hp/G.pl.mhp);
   }
   if(G.pl.shield>0)drwShield(G.pl.x,G.pl.y,G.sT);
-  // ★ Phase 4.4: tint корабля цветом планеты на подлёте — корпус «греется» отражённым светом.
-  //   Нарастает по мере приближения, пик на t=140, затухает с фейдом корабля.
-  if(G.appr){
-    const pInfo=PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh;
-    const tintCol=pInfo.approachCol||P.CYA;
-    // alpha поднимается с 0 до ~0.3, потом плавно затухает вместе с shipA
-    const ramp=Math.min(1,G.landT/140);
-    const tintA=0.30*ramp*shipA;
-    if(tintA>0.01){
-      cx.globalAlpha=tintA;
-      cx.fillStyle=tintCol;
-      // Перекрашиваем прямоугольную зону вокруг корабля (~26x18 — захватывает корпус и крылья)
-      cx.fillRect((G.pl.x-13)|0,(G.pl.y-9)|0,26,18);
-    }
-  }
   cx.globalAlpha=1;
   drwFTX();drawFlash();clearShake();drwFuelVignette(G);drwHUD(G);drwNotif(G);
   drwAlienBriefing(G);
