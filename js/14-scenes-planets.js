@@ -951,8 +951,6 @@ function updPlanetBubblika(G){
         const targetI=B.islands[f.toIdx];
         f.geyserX=Math.max(targetI.x+10,Math.min(targetI.x+targetI.w-10,G.pc.x));
         f.geyserY=LH-1;
-        // Добавляем шок
-        sfxLand();
         // Сообщение
         G.notif='ГЕЙЗЕР ВЫНОСИТ ОБРАТНО!';G.notifT=80;G.notifCol=P.CYA;
       }
@@ -1065,7 +1063,7 @@ function updPlanetBubblika(G){
         return;
       }else{
         G.pc.x=Math.max(targetI.x,Math.min(targetI.x+targetI.w,G.pc.x));
-        B.currentIsland=f.toIdx;sfxLand();spPts(G.pc.x,G.pc.y,10,[P.BUB3,P.WHT,P.CYA],.4,2,16);shake(2);
+        B.currentIsland=f.toIdx;spPts(G.pc.x,G.pc.y,10,[P.BUB3,P.WHT,P.CYA],.4,2,16);shake(2);
       }
     }
     for(const c of B.clouds){c.x-=c.sp;if(c.x<-c.sz){c.x=LW+c.sz;c.y=30+Math.random()*(LH-40);}}
@@ -1145,7 +1143,7 @@ function updPlanetBubblika(G){
     const backPad=B.pads.find(pp=>pp.iIdx===pad.to&&pp.to===pad.iIdx);
     const tx=backPad?backPad.x:(targetIsland.x+targetIsland.w/2);
     B.flying={t:0,dur:30,sx:pc.x,sy:pc.y,tx,ty:targetIsland.y-1,toIdx:pad.to};
-    sfxUI2();spPts(pc.x,pc.y,8,[P.BUB3,P.CYA,P.WHT],.4,2,14);shake(1.5);
+    spPts(pc.x,pc.y,8,[P.BUB3,P.CYA,P.WHT],.4,2,14);shake(1.5);
     return;
   }
 
@@ -1950,11 +1948,11 @@ function updPlanetKrasnozem(G){
 
   const alive=KZ.scavengers.filter(s=>s.alive).length;
   if(!G.krasDone&&KZ.delivered>=KZ.shells.length&&alive===0&&KZ.shellShots.length===0){
-    G.krasDone=true;KZ.coreReady=true;G.campaignState.inventory.energyShield=true;G.pl.cr+=200;
+    G.krasDone=true;KZ.coreReady=true;G.campaignState.inventory.energyShield=true;G.campaignState.inventory.starBattery=true;G.pl.cr+=200;
     // ★ Phase 5.3: спаситель Краснозёма
     unlockAchievement(G,'krasSave');
     G.pl.men+=40;G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+80);
-    G.notif='ЭНЕРГОЩИТ ПОЛУЧЕН! В БОЮ ПОДБОР ЭНЕРГИИ ДАЁТ ЩИТ.';G.notifT=260;G.notifCol=P.CYA;
+    G.notif='ЩИТ И БАТАРЕЯ ПОЛУЧЕНЫ! ГОТОВ К БОЮ С ТИНОЙ.';G.notifT=260;G.notifCol=P.CYA;
     spPts(LW/2,LH/2,42,[P.YEL,P.WHT,P.KRZ3,P.CYA],1,4,45,.02,2);addShockwave(LW/2,LH/2,42,P.YEL,35);flash(.45,P.YEL);sfxPU();setTimeout(sfxPU,90);setTimeout(sfxPU,180);
   }
 

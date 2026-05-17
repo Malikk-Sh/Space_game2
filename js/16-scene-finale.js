@@ -128,10 +128,9 @@ function updTinaBattle(G){
     }
   }
 
-  // Энергетический щит: энергия восстанавливается быстрее
-  if(G.campaignState.inventory.energyShield){
-    p.en=Math.min(p.men,p.en+0.3);
-  }
+  // Энергетический щит / звёздная батарея
+  if(G.campaignState.inventory.starBattery){p.en=9999;}
+  else if(G.campaignState.inventory.energyShield){p.en=Math.min(p.men,p.en+0.3);}
 
   // Движение ТИНЫ (медленное в фазе 1, активнее дальше)
   // ★ Phase 2.3: в субфазе 1.5 — скорость x1.2 (предчувствие фазы 2)
