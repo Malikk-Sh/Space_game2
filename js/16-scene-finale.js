@@ -1362,7 +1362,7 @@ function updFinaleTina(G){
     // Во время starWaiting не стреляем и не запускаем остальную логику Тины
     return;
   }
-  p.en=Math.min(p.men,p.en+.15);
+  p.en=G.campaignState.inventory.starBattery?9999:Math.min(p.men,p.en+.15);
   if(p.shield>0)p.shield--;
   // ★ БАГ-ФИКС: декремент кадров неуязвимости в финале.
   // Без этого после первого попадания p.inv остаётся >0 и блокирует все последующие удары.
@@ -2130,7 +2130,7 @@ function drwFinaleTina(G){
     }else{
       // Энергия игрока вместо щита
       txt('ЭН',76,10,P.UIT2,1);
-      bar(90,10,42,4,G.pl.en/G.pl.men,G.pl.en<20?P.ENL:P.EN,P.DIM2,P.DIM);
+      bar(90,10,42,4,Math.min(1,G.pl.en/G.pl.men),G.pl.en<20?P.ENL:P.EN,P.DIM2,P.DIM);
     }
     // Звёздная батарея (правый блок)
     if(G.campaignState.inventory.starBattery){
