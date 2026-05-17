@@ -24,7 +24,22 @@ if(!USE_TOUCH_UI){
   txt('КР:'+p.cr,pbx,10,P.YEL,1);
   txt('РЕ:'+p.res,pbx+34,10,P.RES,1);
   txs(activeName,pbx+74,10,activeCol,P.BLK,1);
-}if(G.ship){const fy=18;const fc=G.ship.fuel<20?P.RED:P.ORA;cx.globalAlpha=.92;rc(2,fy,54,7,P.UIB);txt('ТОПЛ',4,fy+1,P.UIT2,1);bar(25,fy+1,28,4,G.ship.fuel/100,fc,P.DIM2,P.DIM);if(G.ship.fuel<20&&Math.floor(G.sT/10)%2){cx.globalAlpha=.95;cx.fillStyle=G.ship.fuel<5?P.RED:P.ORA;cx.fillRect(57,fy,7,7);cx.fillStyle='#000';cx.fillRect(60,fy+1,1,4);cx.fillRect(60,fy+6,1,1);cx.fillStyle='#fff';cx.fillRect(59,fy+2,3,2);cx.globalAlpha=1;}cx.globalAlpha=1;if(G.ship.craftQueue&&G.ship.craftQueue.length>0){const cq=G.ship.craftQueue[0];const pct=(cq.progress/cq.total*100)|0;cx.globalAlpha=.92;rc(2,fy+8,54,7,P.UIB);txt('КРАФТ',4,fy+9,P.UIT2,1);bar(25,fy+9,28,4,cq.progress/cq.total,P.YEL,P.DIM2,P.DIM);txs(pct+'%',56,fy+9,P.YEL,P.BLK,1);cx.globalAlpha=1;}}drwWorkerHUD(G);}
+}if(G.ship){const fy=18;const fc=G.ship.fuel<20?P.RED:P.ORA;cx.globalAlpha=.92;rc(2,fy,54,7,P.UIB);txt('ТОПЛ',4,fy+1,P.UIT2,1);bar(25,fy+1,28,4,G.ship.fuel/100,fc,P.DIM2,P.DIM);if(G.ship.fuel<20&&Math.floor(G.sT/10)%2){
+  const wi=57,wiy=fy;const wc=G.ship.fuel<5?P.RED:'#ffaa00';
+  cx.globalAlpha=.95;
+  // Diamond warning sign (7×7px)
+  cx.fillStyle=wc;
+  cx.fillRect(wi+3,wiy,1,1);                        // top point
+  cx.fillRect(wi+2,wiy+1,3,1);                      // row 1
+  cx.fillRect(wi+1,wiy+2,5,3);                      // middle bulk
+  cx.fillRect(wi+2,wiy+5,3,1);                      // row 5
+  cx.fillRect(wi+3,wiy+6,1,1);                      // bottom point
+  // "!" inside (dark)
+  cx.fillStyle='#1a0000';
+  cx.fillRect(wi+3,wiy+2,1,2);                      // bar
+  cx.fillRect(wi+3,wiy+5,1,1);                      // dot
+  cx.globalAlpha=1;
+}cx.globalAlpha=1;if(G.ship.craftQueue&&G.ship.craftQueue.length>0){const cq=G.ship.craftQueue[0];const pct=(cq.progress/cq.total*100)|0;cx.globalAlpha=.92;rc(2,fy+8,54,7,P.UIB);txt('КРАФТ',4,fy+9,P.UIT2,1);bar(25,fy+9,28,4,cq.progress/cq.total,P.YEL,P.DIM2,P.DIM);txs(pct+'%',56,fy+9,P.YEL,P.BLK,1);cx.globalAlpha=1;}}drwWorkerHUD(G);}
 function drwJoystick(){if(!USE_TOUCH_UI||!ALLOW_JOY)return;if(!TOUCH.joyActive){const bx=38,by=LH-38;cx.globalAlpha=.25;ring(bx,by,22,P.UIT2,1);ring(bx,by,8,P.UIT2,1);cx.globalAlpha=.4;txt('MOVE',bx-9,by+26,P.UIT2,1);cx.globalAlpha=1;}else{cx.globalAlpha=.5;disc(TOUCH.joyBaseX|0,TOUCH.joyBaseY|0,22,'#001122');ring(TOUCH.joyBaseX|0,TOUCH.joyBaseY|0,22,P.UIT,1);cx.globalAlpha=1;cx.globalAlpha=.85;disc(TOUCH.joyX|0,TOUCH.joyY|0,9,P.UIT);disc(TOUCH.joyX|0,TOUCH.joyY|0,6,P.UIT2);cx.globalAlpha=1;}}
 // ★ v16: Стилизованные иконки для ship/launch — рисуют корабль/ракету вместо буквы
 function drwShipIcon(cx_,cy_,col){
@@ -380,17 +395,18 @@ function drwAlienBriefing(G){
 }
 
 // ======= ТУТОРИАЛ =======
-// Виньетирование красными краями при критически малом топливе
+// Виньетирование красными краями при малом топливе (fuel<20)
 function drwFuelVignette(G){
   if(!G.ship)return;
   const fuel=G.ship.fuel;
-  if(fuel>=10)return;
-  const alpha=Math.min(0.72,(1-fuel/10)*0.72);
-  const pulse=0.85+0.15*Math.sin(G.sT*0.08);
-  const rg=cx.createRadialGradient(LW/2,LH/2,LH*0.18,LW/2,LH/2,LW*0.72);
+  if(fuel>=20)return;
+  // Плавное нарастание: при 20% едва заметно, при 0% максимально
+  const alpha=Math.min(0.75,(1-fuel/20)*0.75);
+  const pulse=0.82+0.18*Math.sin(G.sT*0.09);
+  const rg=cx.createRadialGradient(LW*0.5,LH*0.5,LH*0.15,LW*0.5,LH*0.5,LW*0.75);
   rg.addColorStop(0,'rgba(0,0,0,0)');
-  rg.addColorStop(0.55,'rgba(0,0,0,0)');
-  rg.addColorStop(1,'rgba(180,10,10,'+(alpha*pulse).toFixed(3)+')');
+  rg.addColorStop(0.5,'rgba(0,0,0,0)');
+  rg.addColorStop(1,'rgba(160,10,5,'+(alpha*pulse).toFixed(3)+')');
   cx.globalAlpha=1;
   cx.fillStyle=rg;
   cx.fillRect(0,0,LW,LH);
