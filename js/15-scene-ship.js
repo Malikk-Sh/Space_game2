@@ -501,7 +501,7 @@ function drwShipView(G){
   bar(panelX+3,py,panelW-7,2,G.pl.hp/G.pl.mhp,P.HP,P.HPB);py+=4;
   // ЭН
   txs('ЭН '+(G.pl.en|0)+'/'+G.pl.men,panelX+3,py,P.EN,P.BLK,1);py+=6;
-  bar(panelX+3,py,panelW-7,2,G.pl.en/G.pl.men,P.EN,'#002211');py+=4;
+  bar(panelX+3,py,panelW-7,2,Math.min(1,G.pl.en/G.pl.men),P.EN,'#002211');py+=4;
   // ТОПЛИВО
   txs('ТОПЛ '+(G.ship.fuel|0)+'%',panelX+3,py,P.RES,P.BLK,1);py+=6;
   bar(panelX+3,py,panelW-7,2,G.ship.fuel/100,P.RES,'#221100');py+=4;
@@ -1455,13 +1455,13 @@ function drwShipWorkers(G){
   G._shipSubHits=[];
   const rooms=[
     {id:'power',name:'ЭЛЕКТРОСТАНЦИЯ',col:P.EN,
-      effect:'+'+(w.power*0.144).toFixed(3)+' ЭНЕРГИИ/КАДР'},
+      effect:'+'+(w.power*0.225).toFixed(3)+' ЭНЕРГИИ/КАДР'},
     {id:'fuel',name:'ТОПЛИВО',col:P.RES,
       effect:(w.fuel>0?'-'+(w.fuel*5)+'% РАСХОДА':'НЕТ ЭФФЕКТА')},
     {id:'bridge',name:'МОСТИК',col:P.UIT,
-      effect:(w.bridge>0?'-'+(w.bridge*5)+'% ВХОДЯЩЕГО УРОНА':'НЕТ ЭФФЕКТА')},
+      effect:(w.bridge>0?'+'+((w.bridge*0.01).toFixed(2))+' ХП/КАДР':'НЕТ ЭФФЕКТА')},
     {id:'workshop',name:'МАСТЕРСКАЯ',col:P.GRN,
-      effect:(w.workshop>0?'+'+w.workshop+' КРАФТ / +'+((w.workshop*0.01).toFixed(2))+' ХП/КАДР':'КРАФТ ОСТАНОВЛЕН')},
+      effect:(w.workshop>0?'+'+w.workshop+' СКОРОСТЬ КРАФТА':'КРАФТ ОСТАНОВЛЕН')},
   ];
   let py=22;
   const cardH=28,cardMargin=4;
