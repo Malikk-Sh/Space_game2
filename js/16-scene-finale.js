@@ -1857,7 +1857,7 @@ function drwFinaleTina(G){
     // — это значит на zoom=1.0 в кадр влезает только её часть (по фидбеку #2)
     const fakeT={
       x:F.hx,y:F.hy,t:t,
-      phase:1,hp:380,mhp:380,
+      phase:1,hp:475,mhp:475,
       energyBlocks:null,turrets:null,weakSpots:null,
       reflectFlash:0,emergencyProtocol:null,
     };

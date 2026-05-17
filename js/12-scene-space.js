@@ -245,15 +245,15 @@ function updSpace(G){
   // Fuel-room снижает расход топлива (1 рабочий = -5% расхода)
   const _fuelEff=1/(1+_sw.fuel*0.05);
   sh.fuel=Math.max(0,sh.fuel-0.009*_fuelEff);
-  // fuel<20: виньетка + иконка (визуальный сигнал), текстовые уведомления здесь отключены
-  // fuel 20-30: текстовое предупреждение без виньетки
-  if(sh.fuel<20){if(sh.fuel<=0&&G.sT%600===0){G.notif='ТОПЛИВО ЗАКОНЧИЛОСЬ';G.notifT=70;G.notifCol=P.RED;}}
-  else if(sh.fuel<30&&G.sT%500===0){G.notif='ТОПЛИВО КОНЧАЕТСЯ... ОСТАЛОСЬ: '+Math.floor(sh.fuel)+'%';G.notifT=90;G.notifCol=P.ORA;}
-  // Power-room регенерирует энергию (1 рабочий = +0.18 EN/кадр); вдвое медленнее без топлива
+  if(sh.fuel<20){
+    if(sh.fuel<=0&&G.sT%400===0){G.notif='ТОПЛИВО ЗАКОНЧИЛОСЬ! ЗАЙДИ В КОРАБЛЬ!';G.notifT=130;G.notifCol=P.RED;}
+    else if(sh.fuel>0&&G.sT%350===0){G.notif='ЗАЙДИ В КОРАБЛЬ ЧТОБЫ ЗАПРАВИТЬ БАК!';G.notifT=120;G.notifCol=P.ORA;}
+  } else if(sh.fuel<30&&G.sT%500===0){G.notif='ТОПЛИВО КОНЧАЕТСЯ... ОСТАЛОСЬ: '+Math.floor(sh.fuel)+'%';G.notifT=90;G.notifCol=P.ORA;}
+  // Power-room регенерирует энергию (1 рабочий = +0.225 EN/кадр); вдвое медленнее без топлива
   // Лимит убран — энергия накапливается свободно (механика без ограничения звёздной батареи)
   p.en=Math.min(9999,p.en+.225*(sh.fuel<=0?0.5:1)*_sw.power);
-  // Workshop workers passively repair ship hull (0.01 HP/frame per worker)
-  if(_sw.workshop>0)p.hp=Math.min(p.mhp,p.hp+_sw.workshop*0.01);
+  // Bridge workers пассивно восстанавливают HP корабля (0.01 HP/кадр за рабочего)
+  if(_sw.bridge>0)p.hp=Math.min(p.mhp,p.hp+_sw.bridge*0.01);
   // Workshop-room продвигает крафт-очередь (1 рабочий = +1 ед/кадр)
   if(_sw.workshop>0&&G.ship.craftQueue&&G.ship.craftQueue.length>0){
     const item=G.ship.craftQueue[0];
@@ -446,7 +446,7 @@ function updSpace(G){
         G.asts.splice(i,1);
       }else{
         // ★ Phase 2.4: Bridge-рабочие снижают входящий урон (5% за каждого)
-        p.hp-=(a.s*2+4)*(1-_sw.bridge*0.05);p.inv=55;p.squash=6;
+        p.hp-=(a.s*2+4);p.inv=55;p.squash=6;
         shake(5);flash(.35,P.HP);sfxHit();G.combo=0;
         spPts(p.x,p.y,14,[P.HP,'#ff8888',P.WHT],1,3.5,20);
         addShockwave(p.x,p.y,14,P.HP);
@@ -534,11 +534,7 @@ function updSpace(G){
               crGain=30;resGain=2;
               partCols=[P.PIR3,P.RED,P.YEL,P.WHT];partN=22;partSp=3.5;
               shakeAmp=4;shockR=22;sfxScale=1.2;
-              // ★ Balance #1: танк даёт материал с шансом 35% — материалы стали реже встречаться чем хотелось.
-              if(Math.random()<0.35){
-                G.campaignState.materials=(G.campaignState.materials||0)+1;
-                fText(e.x,e.y-16,'+МАТЕРИАЛ',P.CYA);
-              }
+              if(Math.random()<0.35)G.rits.push({x:e.x,y:e.y+(Math.random()-.5)*4,vx:-.4-Math.random()*.4,vy:(Math.random()-.5)*1.0,lf:320,t:0,mat:true});
             } else if(_t==='drone'){
               crGain=5;resGain=1;
               partCols=[P.L1,P.L1L,P.WHT];partN=8;partSp=2;
@@ -548,19 +544,13 @@ function updSpace(G){
               partCols=[P.PUR,P.RED,P.YEL,P.WHT];partN=14;partSp=2.5;
               shakeAmp=3;shockR=16;sfxScale=.8;
               G._sniperAlive=false;
-              // ★ Balance #1: снайпер даёт материал с шансом 25%
-              if(Math.random()<0.25){
-                G.campaignState.materials=(G.campaignState.materials||0)+1;
-                fText(e.x,e.y-16,'+МАТЕРИАЛ',P.CYA);
-              }
+              if(Math.random()<0.25)G.rits.push({x:e.x,y:e.y+(Math.random()-.5)*4,vx:-.4-Math.random()*.4,vy:(Math.random()-.5)*1.0,lf:320,t:0,mat:true});
             } else if(_t==='miniboss'){
               crGain=80;resGain=5;
               partCols=[P.PIR3,P.YEL,P.WHT,P.RED,P.ORA];partN=40;partSp=5;
               shakeAmp=10;shockR=36;sfxScale=1.8;
               flash(.6,P.YEL);hitStopAdd(8);
-              // ★ Balance #1: мини-босс даёт +2 материала (было +1) — гарантированный источник
-              G.campaignState.materials=(G.campaignState.materials||0)+2;
-              fText(e.x,e.y-16,'+2 МАТЕРИАЛА',P.CYA);
+              for(let mi=0;mi<2;mi++)G.rits.push({x:e.x+(Math.random()-.5)*10,y:e.y+(Math.random()-.5)*8,vx:-.4-Math.random()*.5,vy:(Math.random()-.5)*1.2,lf:320,t:0,mat:true});
             } else {
               // пират — оригинальные параметры (без изменений)
               crGain=20;powerupChance=.5;
@@ -699,7 +689,7 @@ function updSpace(G){
         p.shield=0;p.inv=25;
         addShockwave(e.x,e.y,12,P.CYA);
       } else {
-        p.hp-=ramDmg*(1-_sw.bridge*0.05);p.inv=55;p.squash=6;
+        p.hp-=ramDmg;p.inv=55;p.squash=6;
         shake(5);flash(.4,P.HP);sfxHit();G.combo=0;hitStopAdd(4);
       }
       spPts(e.x,e.y,12,[P.PIR3,P.ORA,P.WHT],.5,3,20);
@@ -727,7 +717,7 @@ function updSpace(G){
       if(p.shield>0){
         sfxShield();flash(.2,P.CYA);p.shield=0;p.inv=20;
       } else {
-        const dmg=(b.dmg||8)*(1-_sw.bridge*0.05);
+        const dmg=(b.dmg||8);
         p.hp-=dmg;p.inv=40;p.squash=5;
         shake(b.kind==='pierce'?5:3);flash(.3,P.HP);sfxHit();G.combo=0;
         if(b.kind==='pierce'||b.kind==='bigshell')hitStopAdd(3);
@@ -742,14 +732,19 @@ function updSpace(G){
     const r=G.rits[i];
     r.x+=r.vx;r.y+=r.vy;r.vy*=.98;r.lf--;r.t++;
     const dx=p.x-r.x,dy=p.y-r.y,d=Math.hypot(dx,dy);
-    if(d<56){r.vx+=dx/d*.7;r.vy+=dy/d*.7;}
+    if(d<56){r.vx+=dx/d*1.5;r.vy+=dy/d*1.5;}
     if(d<10){
-      p.res++;sfxPU();
-      // ★ Phase 5.3: суммарный собранный RES → достижение "Ресурсный король"
-      G._aTotalResCollected=(G._aTotalResCollected||0)+1;
-      if(G._aTotalResCollected>=50)unlockAchievement(G,'resKing');
-      fText(r.x,r.y,'+RES',P.RES3);
-      spPts(r.x,r.y,6,[P.RES,P.RES3,P.WHT],.5,2,14);
+      if(r.mat){
+        G.campaignState.materials=(G.campaignState.materials||0)+1;
+        sfxPU();fText(r.x,r.y,'+МАТ','#44ccff');
+        spPts(r.x,r.y,8,[P.CYA,'#44ffcc',P.WHT],.5,2,14);
+      } else {
+        p.res++;sfxPU();
+        G._aTotalResCollected=(G._aTotalResCollected||0)+1;
+        if(G._aTotalResCollected>=50)unlockAchievement(G,'resKing');
+        fText(r.x,r.y,'+RES',P.RES3);
+        spPts(r.x,r.y,6,[P.RES,P.RES3,P.WHT],.5,2,14);
+      }
       G.rits.splice(i,1);continue;
     }
     if(r.x<-8||r.lf<=0)G.rits.splice(i,1);
@@ -760,7 +755,7 @@ function updSpace(G){
     const pu=G.pups[i];
     pu.x+=pu.vx;pu.y+=pu.vy;pu.vy*=.98;pu.t++;pu.lf--;
     const dx=p.x-pu.x,dy=p.y-pu.y,d=Math.hypot(dx,dy);
-    if(d<80){pu.vx+=dx/d*1.8;pu.vy+=dy/d*1.8;}
+    if(d<80){pu.vx+=dx/d*3.5;pu.vy+=dy/d*3.5;}
     if(d<10){
       if(pu.type==='shield'){
         p.shield=600;fText(pu.x,pu.y,'SHIELD!',P.CYA);
@@ -782,8 +777,11 @@ function updSpace(G){
 
   // Дрейфующие пришельцы — редкие встречи в космосе, можно подобрать как рабочего
   if(!G.spaceAliens)G.spaceAliens=[];
-  if(G.sT%1800===0&&G.spaceAliens.length<2&&G.prog>0.05&&G.prog<0.92){
-    G.spaceAliens.push({x:LW+8,y:20+Math.random()*(LH-40),vx:-0.3-Math.random()*0.2,vy:(Math.random()-.5)*0.15,t:0});
+  if(G.sT%1800===0&&G.spaceAliens.length===0&&G.prog>0.05&&G.prog<0.92){
+    const cnt=3+((Math.random()*3)|0); // 3, 4 или 5
+    for(let ci=0;ci<cnt;ci++){
+      G.spaceAliens.push({x:LW+8+ci*22,y:20+Math.random()*(LH-40),vx:-0.3-Math.random()*0.2,vy:(Math.random()-.5)*0.15,t:0});
+    }
   }
   for(let i=G.spaceAliens.length-1;i>=0;i--){
     const al=G.spaceAliens[i];
