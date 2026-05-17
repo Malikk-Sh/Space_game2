@@ -395,17 +395,18 @@ function drwAlienBriefing(G){
 }
 
 // ======= ТУТОРИАЛ =======
-// Виньетирование красными краями при критически малом топливе
+// Виньетирование красными краями при малом топливе (fuel<20)
 function drwFuelVignette(G){
   if(!G.ship)return;
   const fuel=G.ship.fuel;
-  if(fuel>=10)return;
-  const alpha=Math.min(0.72,(1-fuel/10)*0.72);
-  const pulse=0.85+0.15*Math.sin(G.sT*0.08);
-  const rg=cx.createRadialGradient(LW/2,LH/2,LH*0.18,LW/2,LH/2,LW*0.72);
+  if(fuel>=20)return;
+  // Плавное нарастание: при 20% едва заметно, при 0% максимально
+  const alpha=Math.min(0.75,(1-fuel/20)*0.75);
+  const pulse=0.82+0.18*Math.sin(G.sT*0.09);
+  const rg=cx.createRadialGradient(LW*0.5,LH*0.5,LH*0.15,LW*0.5,LH*0.5,LW*0.75);
   rg.addColorStop(0,'rgba(0,0,0,0)');
-  rg.addColorStop(0.55,'rgba(0,0,0,0)');
-  rg.addColorStop(1,'rgba(180,10,10,'+(alpha*pulse).toFixed(3)+')');
+  rg.addColorStop(0.5,'rgba(0,0,0,0)');
+  rg.addColorStop(1,'rgba(160,10,5,'+(alpha*pulse).toFixed(3)+')');
   cx.globalAlpha=1;
   cx.fillStyle=rg;
   cx.fillRect(0,0,LW,LH);

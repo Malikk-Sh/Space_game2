@@ -236,6 +236,7 @@ function updSpace(G){
   }
   const p=G.pl;
   G.sT++;
+  if(G.notifT>0)G.notifT--;
   const sh=G.ship;
   // Топливо теперь отвечает за маршевый ход и ускорение. При нуле остаётся аварийная тяга.
   // ★ Phase 2.4: эффекты распределения рабочих
@@ -244,10 +245,10 @@ function updSpace(G){
   // Fuel-room снижает расход топлива (1 рабочий = -5% расхода)
   const _fuelEff=1/(1+_sw.fuel*0.05);
   sh.fuel=Math.max(0,sh.fuel-0.009*_fuelEff);
-  // Виньетка (<10%) визуально сигнализирует — текстовый спам в этой зоне не нужен
-  if(sh.fuel<10){if(sh.fuel<=0&&G.sT%400===0){G.notif='ТОПЛИВО ЗАКОНЧИЛОСЬ';G.notifT=60;G.notifCol=P.RED;}}
-  else if(sh.fuel<15&&G.sT%180===0){G.notif='КРИТИЧНО: ТОПЛИВО КОНЧАЕТСЯ!';G.notifT=110;G.notifCol=P.RED;}
-  else if(sh.fuel<30&&G.sT%200===0){G.notif='ТОПЛИВО КОНЧАЕТСЯ... ОСТАЛОСЬ: '+Math.floor(sh.fuel)+'%';G.notifT=80;G.notifCol=P.ORA;}
+  // fuel<20: виньетка + иконка (визуальный сигнал), текстовые уведомления здесь отключены
+  // fuel 20-30: текстовое предупреждение без виньетки
+  if(sh.fuel<20){if(sh.fuel<=0&&G.sT%360===0){G.notif='ТОПЛИВО ЗАКОНЧИЛОСЬ';G.notifT=70;G.notifCol=P.RED;}}
+  else if(sh.fuel<30&&G.sT%200===0){G.notif='ТОПЛИВО КОНЧАЕТСЯ... ОСТАЛОСЬ: '+Math.floor(sh.fuel)+'%';G.notifT=90;G.notifCol=P.ORA;}
   // Power-room регенерирует энергию (1 рабочий = +0.18 EN/кадр); вдвое медленнее без топлива
   p.en=Math.min(p.men,p.en+.18*(sh.fuel<=0?0.5:1)*_sw.power);
   // Workshop workers passively repair ship hull (0.01 HP/frame per worker)
@@ -1025,7 +1026,7 @@ function drwSpace(G){rc(0,0,LW,LH,P.BG);applyShake();drwNebula();drwStars();
     }
   }
   cx.globalAlpha=1;
-  drwFTX();drawFlash();clearShake();drwFuelVignette(G);drwHUD(G);
+  drwFTX();drawFlash();clearShake();drwFuelVignette(G);drwHUD(G);drwNotif(G);
   drwAlienBriefing(G);
   drwPauseIcon();drwJoystick();drwActionBtns();
   if(G.paused)drwPauseOverlay(G);
