@@ -11,7 +11,7 @@ function newGame(){return{state:'menu',menuT:0,menuSt:[],pl:{x:50,y:LH/2,vx:0,vy
   tutorial:null,
   campaignState:{currentPlanet:'drosh',targetPlanet:'drosh',planetsVisited:[],planetsCompleted:[],inventory:{krokRecords:false,bubblikaContract:false,laserBlueprint:false,laserStrong:false,shieldBlueprint:false,shieldBuilt:false,starBattery:false,spreadUnlocked:false,missileUnlocked:false,beamUnlocked:false,burstUnlocked:false,starMap:false},materials:0,inventory_extra:{},
     // ★ PR D: постоянные апгрейды (sink для КР/РЕС в конце игры)
-    upgrades:{hp:0,en:0,workers:0},flags:{pfftGifted:false,droshSideDone:false,bubSideDone:false,
+    upgrades:{hp:0,en:0,workers:0,speed:0,dmg:0},flags:{pfftGifted:false,droshSideDone:false,bubSideDone:false,
     // Флаги показа туториалов (один раз)
     tutSpaceShown:false,tutDroshShown:false,tutShipShown:false,
   }},ship:{fuel:70,decor:0,workers:{power:2,fuel:0,bridge:0,workshop:0},craftQueue:[]},

@@ -904,7 +904,7 @@ function initFinaleTina(G){
   };
   G.notif='ЦЕНТР СИСТЕМЫ. СИГНАЛ: ТИНА...';G.notifT=180;G.notifCol=P.PUR;
   resetBtns();
-  if(USE_TOUCH_UI){addBtn('w1',LW-52,LH-22,11,'1',P.L1);addBtn('w2',LW-28,LH-22,11,'2',P.L3);}
+  if(USE_TOUCH_UI){addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}
   setJoyEnabled(false);
   // ★ Phase 4.3: мёртвая зона у Тины — тёмно-пурпурные/чёрные туманности
   PTS.length=0;SHK.length=0;FTX.length=0;initStars('center');G.transIn=60;
@@ -1311,7 +1311,8 @@ function updFinaleTina(G){
   if(boostOn){if(!hasBattery)p.en-=.5;p.boost=4;}
   p.vx+=(ix/il)*thrust*(ix?1:0);p.vy+=(iy/il)*thrust*(iy?1:0);
   p.vx*=.86;p.vy*=.86;
-  const maxSp=boostOn?1.92:1.44;
+  const _spMult=1+(G.campaignState?.upgrades?.speed||0)*0.1;
+  const maxSp=(boostOn?1.92:1.44)*_spMult;
   const sp=Math.hypot(p.vx,p.vy);
   if(sp>maxSp){p.vx=p.vx/sp*maxSp;p.vy=p.vy/sp*maxSp;}
   p.x+=p.vx;p.y+=p.vy;
@@ -1397,13 +1398,20 @@ function updFinaleTina(G){
         if(p.wep===2){shake(2.5);flash(.2,P.L3L);}
       }
     } else if(w.kind==='beam'){
-      if(hasBattery||p.en>=w.en){
-        if(!hasBattery)p.en-=w.en;
+      if(p._beamDepleted){
+        if(!hasBattery&&p.en>=20)p._beamDepleted=false;
+        else if(hasBattery)p._beamDepleted=false;
+        else if(G.sT%15===0)fText(p.x,p.y-12,'NET EN',P.ENL);
+      } else if(hasBattery||p.en>=w.en){
+        if(!hasBattery){p.en-=w.en;if(p.en<=0)p._beamDepleted=true;}
         // В финале луч летит дальше (rangeBoost=4)
         _fireFromWeapon(G,p,w,4);
         // Перезаписываем lf и t у только что вставленной пули (для совместимости с финалом)
         const last=G.buls[G.buls.length-1];if(last){last.t=0;last.vy=0;}
-      } else if(G.sT%15===0)fText(p.x,p.y-12,'NET EN',P.ENL);
+      } else {
+        p._beamDepleted=true;
+        if(G.sT%15===0)fText(p.x,p.y-12,'NET EN',P.ENL);
+      }
     } else if(w.kind==='burst'){
       if(p.sCD===0&&p.burstQueue===0){
         if(hasBattery||p.en>=w.en){

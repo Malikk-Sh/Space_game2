@@ -60,7 +60,7 @@ function updShip(G){
       TAP_FIRE=true;ALLOW_JOY=true;
       if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}
     }
-    else if(G.state==='finale_tina'){addBtn('w1',LW-52,LH-22,11,'1',P.L1);addBtn('w2',LW-28,LH-22,11,'2',P.L3);}
+    else if(G.state==='finale_tina'){addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}
     return;
   });}
 
@@ -77,7 +77,10 @@ function updShip(G){
       if(!G.campaignState.planetsCompleted.includes(planetKey))G.campaignState.planetsCompleted.push(planetKey);
       G.campaignState.targetPlanet=PLANETS[planetKey].nextPlanet;
       G.shipReturnState=null;
-      startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);});
+      const hadStarMap=!!(G.campaignState.inventory&&G.campaignState.inventory.starMap);
+      const targetWasSet=!!G._visitTargetSet;
+      G._visitTargetSet=false;
+      startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);if(hadStarMap&&!targetWasSet){G.state='ship_view';G.shipUI='map';G.shipReturnState='space';G.shipT=0;TAP_FIRE=false;ALLOW_JOY=false;resetBtns();addBtn('back',20,24,10,'<',P.UIT);}});
       return;
     }
   }
@@ -641,127 +644,83 @@ function drwShipView(G){
 // === ИНТЕРЬЕРНЫЕ СЦЕНЫ ОТСЕКОВ ===
 
 function drwShipPowerScene(G,x,y,w,h,t){
-  // Тренажёрный зал. Вид сбоку, бегуны бегут "вправо" по горизонтальной ленте.
-  // Поэтому всю сцену видно как профиль: поручни — передняя/задняя пара стоек,
-  // лента — горизонтальная, бегун — в профиль.
-  const workers=Math.max(1,Math.min(3,G.pl.workers));
-  // Задняя стена с панелями (тёмная)
-  rc(x+1,y,w-2,h-3,'#0a1825');
-  // Окна-индикаторы наверху (показывают активность)
-  for(let i=0;i<4;i++){
-    const wx=x+4+i*((w-12)/4|0);
-    rc(wx,y+1,((w-12)/4|0)-1,2,'#001a2a');
-    if((t+i*7)%24<14)rc(wx+1,y+2,((w-12)/4|0)-3,1,P.EN);
+  // ЭЛЕКТРОСТАНЦИЯ: центральный реактор + турбины + щиты управления + операторы
+  const workers=Math.max(1,Math.min(3,(G.ship&&G.ship.workers?G.ship.workers.power:0)||G.pl.workers||1));
+
+  // Фон — тёмно-синяя стена с горизонтальными панелями
+  rc(x,y,w,h,'#03070f');
+  for(let i=0;i<h;i+=4){rc(x,y+i,w,1,'#050c18');}
+
+  // Пол
+  rc(x,y+h-4,w,4,'#0a1a28');rc(x,y+h-4,w,1,'#1a3a50');
+
+  // === ЦЕНТРАЛЬНЫЙ РЕАКТОР (в центре сцены) ===
+  const cx_=x+w/2|0, cy_=y+h/2-2|0;
+  const spin=t*0.04;
+  // Внешнее свечение реактора
+  cx.globalAlpha=0.15+0.1*Math.sin(t*0.06);
+  rc(cx_-7,cy_-7,14,14,P.EN);
+  cx.globalAlpha=1;
+  // Кольцо
+  rc(cx_-5,cy_-5,10,10,'#0a2a18');
+  rc(cx_-4,cy_-4,8,8,'#124a28');
+  rc(cx_-4,cy_-4,8,1,'#22aa55');rc(cx_-4,cy_+3,8,1,'#22aa55');
+  rc(cx_-4,cy_-4,1,8,'#22aa55');rc(cx_+3,cy_-4,1,8,'#22aa55');
+  // Ядро реактора
+  rc(cx_-2,cy_-2,4,4,'#006622');
+  rc(cx_-1,cy_-1,2,2,P.EN);
+  // Вращающиеся лопасти турбины
+  const blades=[[1,0],[-1,0],[0,1],[0,-1]];
+  cx.fillStyle=P.EN;
+  for(let b=0;b<4;b++){
+    const a=spin+b*Math.PI/2;
+    const bx=cx_+(Math.cos(a)*4)|0;
+    const by=cy_+(Math.sin(a)*4)|0;
+    cx.globalAlpha=0.7;rc(bx-1,by-1,2,2,'#22ff44');
+  }
+  cx.globalAlpha=1;
+  // Энергоканалы от реактора к краям
+  const ePulse=(t%12)/12;
+  for(let step=0;step<(w/2-8)|0;step+=4){
+    const alpha=Math.max(0,1-Math.abs((step/((w/2-8)))-ePulse)*2);
+    cx.globalAlpha=alpha*0.7;
+    rc(cx_+4+step,cy_,1,1,P.EN);
+    rc(cx_-5-step,cy_,1,1,P.EN);
+  }
+  cx.globalAlpha=1;
+
+  // === ПАНЕЛИ УПРАВЛЕНИЯ (по бокам) ===
+  const panels=[{px:x+3},{px:x+w-11}];
+  for(const p of panels){
+    rc(p.px,y+3,8,h-8,'#0a1825');
+    rc(p.px,y+3,8,1,'#1a3a50');
+    // Мигающие огоньки
+    for(let li=0;li<4;li++){
+      const on=(t+li*5+p.px)%20<12;
+      const lc=[P.EN,'#22aaff','#ffee22','#ff4422'][li%4];
+      if(on)rc(p.px+1,y+5+li*3,2,1,lc);
+      else rc(p.px+1,y+5+li*3,2,1,'#002211');
+    }
+    // Горизонтальные шкалы
+    const barH=(t+p.px)%30;
+    rc(p.px+4,y+h-9,3,Math.min(6,barH/5)|0,P.EN);
   }
 
-  // === БЕГОВЫЕ ДОРОЖКИ ===
-  // Каждая дорожка — компактный модуль: короткая лента + поручень + бегун.
-  // Длина дорожки = ширина бегуна + место для рук впереди и сзади.
-  const trackW=Math.min(18,((w-6)/workers|0)-2);
-  const trackH=18;
-  const totalW=workers*trackW+(workers-1)*3;
-  const startX=x+(w-totalW)/2|0;
-  const trackY=y+5;
-
-  for(let i=0;i<workers;i++){
-    const tx=startX+i*(trackW+3);
-    const ty=trackY;
-
-    // === ОСНОВАНИЕ ===
-    rc(tx,ty+trackH-4,trackW,4,'#222a33');
-    rc(tx,ty+trackH-4,trackW,1,'#3a4654');
-    rc(tx,ty+trackH-1,trackW,1,'#0a0e14');
-    // Ножки
-    rc(tx+1,ty+trackH,2,1,'#1a1a1a');
-    rc(tx+trackW-3,ty+trackH,2,1,'#1a1a1a');
-
-    // === ПОЛОТНО — горизонтальная лента ===
-    const beltY=ty+trackH-7;
-    rc(tx+1,beltY,trackW-2,3,'#15191e');
-    rc(tx+1,beltY,trackW-2,1,'#252b34');  // верхняя кромка
-    rc(tx+1,beltY+2,trackW-2,1,'#0a0e14'); // нижняя
-    // Бегущие штрихи на ленте (вправо)
-    const offset=Math.floor(t*0.7+i*5)%5;
-    for(let s=0;s<((trackW-2)/5|0)+1;s++){
-      const sx=tx+1+((s*5+offset)%(trackW-2));
-      if(sx<tx+trackW-1)rc(sx,beltY+1,1,1,'#4a5a6a');
-    }
-
-    // === ПЕРЕДНИЙ ПОРУЧЕНЬ (горизонтальный, перед бегуном) ===
-    // Стойка спереди (прямо у носа) и стойка сзади (за спиной), соединённые штангой
-    const railY=ty+1;
-    const railH=beltY-railY-2;
-    rc(tx+2,railY,1,railH,'#556677');               // задняя стойка (за спиной бегуна)
-    rc(tx+trackW-3,railY,1,railH,'#556677');        // передняя стойка (перед бегуном)
-    rc(tx+2,railY,trackW-4,1,'#778899');             // верхняя штанга
-    // Маленькая ручка-перекладина впереди (бегун держится)
-    rc(tx+trackW-7,railY+3,4,1,'#667788');
-    rc(tx+trackW-7,railY+4,4,1,'#445566');
-
-    // === ПАНЕЛЬ УПРАВЛЕНИЯ (на передней стойке) ===
-    rc(tx+trackW-4,railY+1,3,3,'#001833');
-    if((t+i*5)%18<10)rc(tx+trackW-3,railY+2,1,1,P.EN); // мигающий огонёк
-
-    // === БЕГУН (в профиль, лицом ВПРАВО) ===
-    const runT=Math.floor(t/4)+i*3;
-    const legPhase=runT%2;
-    // Подскок при беге
-    const bob=Math.sin(t*0.4+i*2)*0.6|0;
-    // Бегун стоит в центре дорожки
-    const wx=tx+trackW/2-1|0;   // центр по X
-    const wy=beltY-1+bob;       // макушка над лентой
-
-    // Тело — наклонено вперёд (как у настоящих бегунов)
-    rc(wx,wy-2,2,3,'#5588cc');
-    rc(wx,wy-2,2,1,'#7799dd');  // верхняя часть жилета
-    // Голова — в профиль, видим висок (с одним глазом)
-    rc(wx,wy-5,2,3,'#aaccee');
-    rc(wx,wy-5,1,1,'#88bbdd');   // тень волос (затылок)
-    rc(wx+1,wy-4,1,1,'#1a3380'); // глаз (один — мы видим в профиль)
-    // Нос — выступает вперёд (вправо)
-    rc(wx+2,wy-4,1,1,'#aaccee');
-
-    // Руки — синхронны с ногами но в противофазе
-    if(legPhase===0){
-      // Левая рука вперёд, правая назад (мы видим обе в профиль как наложение)
-      rc(wx-1,wy-1,1,2,'#5588cc');     // задняя рука
-      rc(wx+2,wy-1,1,2,'#5588cc');     // передняя рука вытянута вперёд
-    }else{
-      rc(wx-1,wy,1,2,'#5588cc');       // задняя рука внизу
-      rc(wx+2,wy-2,1,2,'#5588cc');     // передняя рука согнута выше
-    }
-
-    // Ноги — анимация шагов в профиль
-    if(legPhase===0){
-      // Передняя нога вытянута вперёд, задняя согнута сзади
-      rc(wx+1,wy+1,1,2,'#1a3380');     // передняя нога
-      rc(wx+1,wy+3,1,1,'#221122');     // ботинок впереди
-      rc(wx-1,wy+1,1,1,'#1a3380');     // задняя нога согнута
-      rc(wx-1,wy+2,1,1,'#221122');     // задний ботинок
-    }else{
-      // Передняя нога согнута, задняя вытянута
-      rc(wx,wy+1,1,2,'#1a3380');
-      rc(wx,wy+3,1,1,'#221122');
-      rc(wx+2,wy+1,1,1,'#1a3380');
-      rc(wx+2,wy+2,1,1,'#221122');
-    }
-
-    // Капля пота (летит назад при беге)
-    if((t+i*7)%32<3){
-      rc(wx-2,wy-3,1,1,'#aaeeff');
-      rc(wx-3,wy-2,1,1,'#88ccee');
-    }
+  // === ОПЕРАТОРЫ у панелей ===
+  const opPositions=workers===1?[cx_-2]:(workers===2?[x+8,x+w-12]:[x+8,cx_-4,x+w-12]);
+  for(let i=0;i<Math.min(workers,opPositions.length);i++){
+    const ox=opPositions[i], oy=y+h-4;
+    const bob=Math.sin(t*0.08+i)*0.5|0;
+    // Тело
+    rc(ox-1,oy-8+bob,3,5,'#3366aa');
+    rc(ox-1,oy-8+bob,3,1,'#5588cc');
+    // Голова
+    rc(ox-1,oy-11+bob,3,3,'#aaccee');
+    // Руки к панели
+    if(i<2){rc(ox-2,oy-7+bob,2,2,'#3366aa');}else{rc(ox+2,oy-7+bob,2,2,'#3366aa');}
+    // Ноги
+    rc(ox-1,oy-3,1,3,'#1a3380');rc(ox+1,oy-3,1,3,'#1a3380');
   }
-
-  // Энергопровод: от дорожек идёт энергия вправо к индикатору
-  if(t%6<3){
-    const sparkY=y+h-7;
-    const sparkX=x+w-6-((t%6)*1)|0;
-    rc(sparkX,sparkY,1,1,P.EN);
-  }
-  // Индикатор энергопотока
-  rc(x+w-5,y+5,3,4,'#001a0a');
-  rc(x+w-4,y+6,1,Math.max(1,(t%18)/6|0),P.EN);
 }
 
 function drwShipFuelScene(G,x,y,w,h,t){
@@ -1211,7 +1170,7 @@ function _queueWeapon(G,itemId){
 // ★ PR D: Постоянные апгрейды корабля (sink для накопленных КР/РЕС в конце игры).
 //   Каждый апгрейд имеет несколько уровней с растущей ценой. Эффект применяется при покупке.
 function _upgradeItems(G){
-  const u=(G.campaignState.upgrades||{hp:0,en:0,workers:0});
+  const u=(G.campaignState.upgrades||{hp:0,en:0,workers:0,speed:0,dmg:0});
   // Каждый элемент = ОДИН следующий уровень (если есть). costs/effects индексируются от 0.
   const hpDefs   =[{cr:60, res:4, eff:'+20 МАКСИМАЛЬНОГО ХП'},
                    {cr:100,res:6, eff:'+20 МАКСИМАЛЬНОГО ХП'},
@@ -1221,6 +1180,12 @@ function _upgradeItems(G){
                    {cr:140,res:8, eff:'+25 МАКСИМАЛЬНОЙ ЭНЕРГИИ'}];
   const workerDefs=[{cr:100,res:8, eff:'+1 РАБОЧИЙ'},
                     {cr:200,res:15,eff:'+1 РАБОЧИЙ'}];
+  const speedDefs=[{cr:80, res:5, eff:'+10% СКОРОСТЬ'},
+                   {cr:130,res:8, eff:'+10% СКОРОСТЬ'},
+                   {cr:180,res:12,eff:'+10% СКОРОСТЬ'}];
+  const dmgDefs  =[{cr:90, res:6, eff:'+25% УРОН'},
+                   {cr:150,res:10,eff:'+25% УРОН'},
+                   {cr:220,res:15,eff:'+25% УРОН'}];
   const out=[];
   if(u.hp<hpDefs.length){
     const d=hpDefs[u.hp];
@@ -1234,6 +1199,14 @@ function _upgradeItems(G){
     const d=workerDefs[u.workers];
     out.push({id:'workers',label:'НАЁМ РАБОЧЕГО',lvl:u.workers+1,maxLvl:workerDefs.length,cost:d.cr,res:d.res,effect:d.eff,col:P.CYA});
   }
+  if((u.speed||0)<speedDefs.length){
+    const d=speedDefs[u.speed||0];
+    out.push({id:'speed',label:'ДВИГАТЕЛЬ',lvl:(u.speed||0)+1,maxLvl:speedDefs.length,cost:d.cr,res:d.res,effect:d.eff,col:P.TH2});
+  }
+  if((u.dmg||0)<dmgDefs.length){
+    const d=dmgDefs[u.dmg||0];
+    out.push({id:'dmg',label:'ОРУЖЕЙНЫЙ БЛОК',lvl:(u.dmg||0)+1,maxLvl:dmgDefs.length,cost:d.cr,res:d.res,effect:d.eff,col:P.L3});
+  }
   return out;
 }
 
@@ -1245,7 +1218,7 @@ function _buyUpgrade(G,upgradeId){
   // Списываем
   G.pl.cr-=item.cost;
   G.pl.res-=item.res;
-  if(!G.campaignState.upgrades)G.campaignState.upgrades={hp:0,en:0,workers:0};
+  if(!G.campaignState.upgrades)G.campaignState.upgrades={hp:0,en:0,workers:0,speed:0,dmg:0};
   // Применяем эффект
   if(upgradeId==='hp'){
     G.pl.mhp+=20;
@@ -1259,6 +1232,12 @@ function _buyUpgrade(G,upgradeId){
     G.pl.workers++;
     ensureShipWorkers(G);G.ship.workers.power++;
     G.campaignState.upgrades.workers++;
+  } else if(upgradeId==='speed'){
+    if(!G.campaignState.upgrades.speed)G.campaignState.upgrades.speed=0;
+    G.campaignState.upgrades.speed++;
+  } else if(upgradeId==='dmg'){
+    if(!G.campaignState.upgrades.dmg)G.campaignState.upgrades.dmg=0;
+    G.campaignState.upgrades.dmg++;
   }
   G.notif=item.label+' КУПЛЕНО!';G.notifT=130;G.notifCol=item.col;
   sfxPU();setTimeout(sfxPU,80);
@@ -1303,7 +1282,8 @@ function drwShipWorkshop(G){
   cx.fillStyle='#bb7700';
   cx.fillRect(11,4,1,2);
   // Кнопка назад
-  txs('< НАЗАД',16,5,P.UIT2,P.BLK,1);
+  rc(12,1,42,13,'#1a4a2a');rc(12,13,42,1,P.GRN);
+  txs('< НАЗАД',16,5,P.GRN,P.BLK,1);
   txcs('МАСТЕРСКАЯ',5,P.GRN,P.BLK,1);
   // Ресурсы справа в рамке
   const crTxt='КР: '+G.pl.cr;
@@ -1338,95 +1318,60 @@ function drwShipWorkshop(G){
   rc(2,py,LW-4,1,'#1a5530');
   cx.fillStyle=P.GRN;cx.fillRect(2,py,1,1);cx.fillRect(LW-3,py,1,1);
   py+=4;
-  // ===== СПИСОК ДОСТУПНЫХ =====
-  txs('ОРУЖИЕ:',6,py,P.UIT2,P.BLK,1);py+=10;
+  // ===== 2-КОЛОНКИ: ОРУЖИЕ (лево) / АПГРЕЙДЫ (право) =====
+  const colW=(LW-14)/2|0; // ~153px per column
+  const leftX=4, rightX=leftX+colW+6;
   const items=_workshopItems(G);
   const queued=new Set((G.ship.craftQueue||[]).map(c=>c.id));
   G._shipSubHits=[];
   const cardH=18,cardMargin=2;
-  for(const item of items){
-    const cardY=py;
-    const cardW=LW-12;
-    const cardX=6;
-    // Цвет рамки/фона по статусу
-    let frame='#1a3550', bg='#0a1828', btn='СДЕЛАТЬ', btnCol=P.GRN, btnBg='#1a3a18';
-    let nameCol=P.WHT;
-    if(item.have){frame=P.GRN;bg='#0a1f12';btn='✓ ГОТОВО';btnCol=P.GRN;btnBg='#0a2818';nameCol=P.GRN;}
-    else if(queued.has(item.id)){frame=P.CYA;bg='#0a1828';btn='В ОЧЕРЕДИ';btnCol=P.CYA;btnBg='#082030';}
-    else if(item.lock){frame='#552233';bg='#180a0e';btn='ЗАКРЫТО';btnCol='#aa6655';btnBg='#250a0e';nameCol='#aa8866';}
-    else {
-      const haveCR=G.pl.cr,haveMat=G.campaignState.materials||0;
-      if(haveCR<item.cost||haveMat<item.matCost){frame='#aa8822';bg='#1f1808';btn='МАЛО';btnCol=P.YEL;btnBg='#2a1f08';}
-    }
-    // Рамка с глубиной (двойной обвод)
-    rc(cardX,cardY,cardW,cardH,frame);
-    rc(cardX+1,cardY+1,cardW-2,cardH-2,bg);
-    // Цветной акцент-полоса слева (3px) — даёт визуальный якорь для статуса
-    rc(cardX+1,cardY+1,3,cardH-2,frame);
-    // ★ Polish #3: мини-иконка-маркёр оружия (ромбик/квадратик в зависимости от типа)
-    const ix=cardX+8,iy=cardY+(cardH/2|0)-2;
-    cx.fillStyle=nameCol===P.WHT?frame:nameCol;
-    cx.fillRect(ix,iy,1,3);cx.fillRect(ix+1,iy-1,1,5);cx.fillRect(ix+2,iy-2,1,7);cx.fillRect(ix+3,iy-1,1,5);cx.fillRect(ix+4,iy,1,3);
-    // Название
-    txs(item.label,cardX+15,cardY+3,nameCol,P.BLK,1);
-    // Цена
-    const priceTxt=item.cost+' КР'+(item.matCost>0?' + '+item.matCost+' МАТ':'');
-    txs(priceTxt,cardX+15,cardY+10,P.YEL,P.BLK,1);
-    // Лок-хинт под названием (не справа — там кнопка)
-    if(item.lock){
-      txs(item.lockHint,cardX+15,cardY+10,'#aa6655',P.BLK,1);
-    }
-    // Кнопка справа — с подсветкой при hover (cursor)
-    const btnW=gw(btn)+8, btnX=cardX+cardW-btnW-3, btnY=cardY+4;
-    const hover=!USE_TOUCH_UI&&mX>=cardX&&mX<=cardX+cardW&&mY>=cardY&&mY<=cardY+cardH;
-    if(hover&&!item.have&&!item.lock&&!queued.has(item.id)){
-      cx.globalAlpha=.4;rc(cardX+1,cardY+1,cardW-2,cardH-2,frame);cx.globalAlpha=1;
-    }
-    rc(btnX,btnY,btnW,10,btnBg);
-    rc(btnX,btnY,btnW,1,btnCol);
-    rc(btnX,btnY+9,btnW,1,btnCol);
-    txs(btn,btnX+4,btnY+2,btnCol,P.BLK,1);
-    // Регистрируем клик только если доступно для постановки в очередь
-    if(!item.have&&!item.lock&&!queued.has(item.id)){
-      G._shipSubHits.push({x:cardX,y:cardY,w:cardW,h:cardH,itemId:item.id});
-    }
-    py+=cardH+cardMargin;
-  }
-  // ★ PR D: секция АПГРЕЙДОВ — постоянные улучшения за КР+РЕС
+  // Column headers
+  txs('ОРУЖИЕ:',leftX+2,py,P.UIT2,P.BLK,1);
+  txs('АПГРЕЙДЫ (РЕС:'+G.pl.res+'):',rightX+2,py,P.PUR,P.BLK,1);
+  py+=9;
+  // Pre-build arrays for both columns
   const upgrades=_upgradeItems(G);
-  if(upgrades.length>0||(G.campaignState.upgrades&&(G.campaignState.upgrades.hp>0||G.campaignState.upgrades.en>0||G.campaignState.upgrades.workers>0))){
-    py+=4;
-    rc(2,py-1,LW-4,1,'#552288');py+=4;
-    txs('АПГРЕЙДЫ КОРАБЛЯ (РЕСУРСЫ: '+G.pl.res+'):',6,py,P.PUR,P.BLK,1);py+=10;
-    for(const up of upgrades){
-      const cardY=py;
-      const cardW=LW-12, cardX=6;
-      const haveCR=G.pl.cr, haveRES=G.pl.res;
+  const maxRows=Math.max(items.length,upgrades.length);
+  for(let i=0;i<maxRows;i++){
+    const rowY=py+i*(cardH+cardMargin);
+    // Left column: weapon card
+    if(i<items.length){
+      const item=items[i];
+      const cardX=leftX,cardY=rowY,cardW=colW;
+      let frame='#1a3550',bg='#0a1828',btn='СДЕЛАТЬ',btnCol=P.GRN,btnBg='#1a3a18',nameCol=P.WHT;
+      if(item.have){frame=P.GRN;bg='#0a1f12';btn='✓';btnCol=P.GRN;btnBg='#0a2818';nameCol=P.GRN;}
+      else if(queued.has(item.id)){frame=P.CYA;bg='#0a1828';btn='...';btnCol=P.CYA;btnBg='#082030';}
+      else if(item.lock){frame='#552233';bg='#180a0e';btn='X';btnCol='#aa6655';btnBg='#250a0e';nameCol='#aa8866';}
+      else{const hc=G.pl.cr,hm=G.campaignState.materials||0;if(hc<item.cost||hm<item.matCost){frame='#aa8822';bg='#1f1808';btn='!';btnCol=P.YEL;btnBg='#2a1f08';}}
+      rc(cardX,cardY,cardW,cardH,frame);rc(cardX+1,cardY+1,cardW-2,cardH-2,bg);
+      rc(cardX+1,cardY+1,3,cardH-2,frame);
+      txs(item.label,cardX+6,cardY+3,nameCol,P.BLK,1);
+      if(item.lock)txs(item.lockHint,cardX+6,cardY+10,'#aa6655',P.BLK,1);
+      else txs(item.cost+'КР'+(item.matCost>0?'+'+item.matCost+'М':''),cardX+6,cardY+10,P.YEL,P.BLK,1);
+      const btnW=gw(btn)+6,btnX=cardX+cardW-btnW-2,btnY=cardY+4;
+      const hover=!USE_TOUCH_UI&&mX>=cardX&&mX<=cardX+cardW&&mY>=cardY&&mY<=cardY+cardH;
+      if(hover&&!item.have&&!item.lock&&!queued.has(item.id)){cx.globalAlpha=.4;rc(cardX+1,cardY+1,cardW-2,cardH-2,frame);cx.globalAlpha=1;}
+      rc(btnX,btnY,btnW,10,btnBg);rc(btnX,btnY,btnW,1,btnCol);rc(btnX,btnY+9,btnW,1,btnCol);
+      txs(btn,btnX+3,btnY+2,btnCol,P.BLK,1);
+      if(!item.have&&!item.lock&&!queued.has(item.id))G._shipSubHits.push({x:cardX,y:cardY,w:cardW,h:cardH,itemId:item.id});
+    }
+    // Right column: upgrade card
+    if(i<upgrades.length){
+      const up=upgrades[i];
+      const cardX=rightX,cardY=rowY,cardW=colW;
+      const haveCR=G.pl.cr,haveRES=G.pl.res;
       const affordable=haveCR>=up.cost&&haveRES>=up.res;
-      const frame=affordable?up.col:'#aa8822', bg='#0a1828';
-      const btn=affordable?'КУПИТЬ':'МАЛО', btnCol=affordable?up.col:P.YEL, btnBg=affordable?'#1a1830':'#2a1f08';
-      // Рамка + фон + цветная полоса
-      rc(cardX,cardY,cardW,cardH,frame);
-      rc(cardX+1,cardY+1,cardW-2,cardH-2,bg);
+      const frame=affordable?up.col:'#aa8822',bg='#0a0814';
+      const btn=affordable?'КУП':'!',btnCol=affordable?up.col:P.YEL,btnBg=affordable?'#1a1830':'#2a1f08';
+      rc(cardX,cardY,cardW,cardH,frame);rc(cardX+1,cardY+1,cardW-2,cardH-2,bg);
       rc(cardX+1,cardY+1,3,cardH-2,up.col);
-      // Название с уровнем
-      txs(up.label+' ['+up.lvl+'/'+up.maxLvl+']',cardX+7,cardY+3,affordable?P.WHT:'#aa8866',P.BLK,1);
-      // Эффект слева
-      txs(up.effect,cardX+7,cardY+10,up.col,P.BLK,1);
-      // Кнопка справа
-      const btnW=gw(btn)+8, btnX=cardX+cardW-btnW-3, btnY=cardY+4;
-      rc(btnX,btnY,btnW,10,btnBg);
-      rc(btnX,btnY,btnW,1,btnCol);
-      rc(btnX,btnY+9,btnW,1,btnCol);
-      txs(btn,btnX+4,btnY+2,btnCol,P.BLK,1);
-      // Цена под кнопкой (или над, чтобы не пересекалась с эффектом)
-      const priceTxt=up.cost+'КР+'+up.res+'РЕС';
-      const priceW=gw(priceTxt);
-      txs(priceTxt,btnX+btnW-priceW,cardY+15,affordable?P.YEL:'#aa6655',P.BLK,1);
-      if(affordable){
-        G._shipSubHits.push({x:cardX,y:cardY,w:cardW,h:cardH,upgradeId:up.id});
-      }
-      py+=cardH+cardMargin;
+      txs(up.label+' '+up.lvl+'/'+up.maxLvl,cardX+6,cardY+3,affordable?P.WHT:'#aa8866',P.BLK,1);
+      txs(up.effect,cardX+6,cardY+10,up.col,P.BLK,1);
+      const btnW=gw(btn)+6,btnX=cardX+cardW-btnW-2,btnY=cardY+4;
+      rc(btnX,btnY,btnW,10,btnBg);rc(btnX,btnY,btnW,1,btnCol);rc(btnX,btnY+9,btnW,1,btnCol);
+      txs(btn,btnX+3,btnY+2,btnCol,P.BLK,1);
+      txs(up.cost+'К+'+up.res+'Р',cardX+cardW-gw(up.cost+'К+'+up.res+'Р')-2,cardY+15,affordable?P.YEL:'#aa6655',P.BLK,1);
+      if(affordable)G._shipSubHits.push({x:cardX,y:cardY,w:cardW,h:cardH,upgradeId:up.id});
     }
   }
 }
@@ -1459,7 +1404,8 @@ function drwShipWorkers(G){
   // ===== ВЕРХ =====
   rc(0,0,LW,16,'#0a1828');
   rc(0,15,LW,1,P.EN);
-  txs('< НАЗАД',24,5,P.UIT2,P.BLK,1);
+  rc(20,1,42,13,'#0a2a4a');rc(20,13,42,1,P.EN);
+  txs('< НАЗАД',24,5,P.EN,P.BLK,1);
   txcs('РАСПРЕДЕЛЕНИЕ РАБОЧИХ',5,P.EN,P.BLK,1);
   txs('ВСЕГО: '+G.pl.workers,LW-gw('ВСЕГО: '+G.pl.workers)-3,5,P.WHT,P.BLK,1);
 
@@ -1547,6 +1493,7 @@ function updShipMap(G){
         if(h.mapPlanet){
           if(_mapIsUnlocked(G,h.mapPlanet)){
             G.campaignState.targetPlanet=h.mapPlanet;
+            G._visitTargetSet=true;
             G.notif='КУРС ЗАДАН: '+(PLANETS[h.mapPlanet]||PLANETS.drosh).name;
             G.notifT=130;G.notifCol=P.CYA;
             sfxUI2();sfxPU();flash(.2,P.CYA);
@@ -1602,7 +1549,8 @@ function drwShipMap(G){
   // ===== ВЕРХНИЙ ЗАГОЛОВОК =====
   rc(0,0,LW,16,'#0a1828');
   rc(0,15,LW,1,P.PUR);
-  txs('< НАЗАД',24,5,P.UIT2,P.BLK,1);
+  rc(20,1,42,13,'#1a0a2a');rc(20,13,42,1,P.PUR);
+  txs('< НАЗАД',24,5,P.PUR,P.BLK,1);
   txcs('СИСТЕМНАЯ КАРТА',5,P.PUR,P.BLK,1);
   const dest=(PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh).name;
   const destTxt='ЦЕЛЬ: '+dest;

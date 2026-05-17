@@ -63,7 +63,7 @@ function _cycleWeapon(G){
 // Выстрел из конкретного оружия (используется и в space, и в финале).
 //   rangeBoost — множитель дальности (в финале нужно больше: lf=160 вместо 52)
 function _fireFromWeapon(G,p,w,rangeBoost){
-  const dmgM=_DEV.dmgMult;
+  const dmgM=_DEV.dmgMult*(1+(G.campaignState?.upgrades?.dmg||0)*0.25);
   const lf=Math.max(10,(w.range*(rangeBoost||1))|0);
   switch(w.kind){
     case 'simple':
@@ -106,7 +106,7 @@ function _startBurst(G,p,w){
   shake(2);
 }
 
-function initSpace(G){saveCheckpoint(G,'space');TAP_FIRE=true;ALLOW_JOY=true;Object.assign(G,{state:'space',asts:[],buls:[],rits:[],enms:[],ebuls:[],pups:[],sT:0,prog:0,appr:false,landT:0,astST:40,enmST:240,combo:0,comboT:0,transIn:60,landingTriggered:false,_minibossSpawned:false,_sniperAlive:false});Object.assign(G.pl,{x:50,y:LH/2,vx:0,vy:0,inv:0,boost:0,squash:0,drift:0,boostWas:false,wep:Math.min(2,G.pl.wep||1),burstQueue:0,burstNext:0});
+function initSpace(G){saveCheckpoint(G,'space');TAP_FIRE=true;ALLOW_JOY=true;Object.assign(G,{state:'space',asts:[],buls:[],rits:[],enms:[],ebuls:[],pups:[],spaceAliens:[],sT:0,prog:0,appr:false,landT:0,astST:40,enmST:240,combo:0,comboT:0,transIn:60,landingTriggered:false,_minibossSpawned:false,_sniperAlive:false});Object.assign(G.pl,{x:50,y:LH/2,vx:0,vy:0,inv:0,boost:0,squash:0,drift:0,boostWas:false,wep:Math.min(2,G.pl.wep||1),burstQueue:0,burstNext:0,_beamDepleted:false});
 // ★ Миграция: если wepIdx ещё не задан, выводим из legacy p.wep (1→0 L1, 2→3 L2)
 if(G.pl.wepIdx==null)G.pl.wepIdx=(G.pl.wep===2?3:0);
 // Сброс на L1, если выбран недоступный слот (после загрузки старого сейва)
@@ -146,7 +146,7 @@ function spwnPirate(G){const y=30+Math.random()*(LH-60);G.enms.push({type:'pirat
 //   Balance #7: HP 60 → 36 (−40%). Balance #1: дроп материала 35%.
 function spwnTank(G){
   const y=40+Math.random()*(LH-80);
-  G.enms.push({type:'tank',x:LW+14,y,vx:-0.4,vy:0,t:0,hp:36,maxHp:36,shootCD:60+Math.random()*30,flash:0});
+  G.enms.push({type:'tank',x:LW+14,y,vx:-0.4,vy:0,t:0,hp:22,maxHp:22,shootCD:60+Math.random()*30,flash:0});
 }
 
 // ★ Рой дронов-камикадзе — 3-5 штук, преследуют игрока, гибнут на таран.
@@ -177,7 +177,7 @@ function spwnSniper(G){
 //   Balance #7: HP 150 → 95 (−37%). Balance #1: дроп +2 материала (было 1).
 function spwnMiniboss(G){
   const y=LH/2+(Math.random()-.5)*30;
-  G.enms.push({type:'miniboss',x:LW+18,y,vx:-0.5,vy:0,t:0,hp:95,maxHp:95,shootCD:90,phase:'shoot',_raged:false,flash:0});
+  G.enms.push({type:'miniboss',x:LW+18,y,vx:-0.5,vy:0,t:0,hp:57,maxHp:57,shootCD:90,phase:'shoot',_raged:false,flash:0});
 }
 
 // ★ Взвешенный диспетчер спавна — выбирает тип врага по G.prog.
@@ -325,7 +325,8 @@ function updSpace(G){
   if(!boostOn&&wasBoosting)p.drift=30; // запускаем drift-окно
   if(p.drift>0){p.drift--;p.vx*=.94;p.vy*=.94;} // мягкое торможение во время drift
   else{p.vx*=.82;p.vy*=.82;}                      // обычное торможение
-  const maxSp=boostOn?2.4:(p.drift>0?2.1:1.8);
+  const _spMult=1+(G.campaignState?.upgrades?.speed||0)*0.1;
+  const maxSp=(boostOn?2.4:(p.drift>0?2.1:1.8))*_spMult;
   const sp=Math.hypot(p.vx,p.vy);
   if(sp>maxSp){p.vx=p.vx/sp*maxSp;p.vy=p.vy/sp*maxSp;}
   p.x=Math.max(12,Math.min(LW*.52,p.x+p.vx));
@@ -370,11 +371,17 @@ function updSpace(G){
   if(firing){
     if(w.kind==='beam'){
       // Луч: 1 EN/кадр, мини-пуля каждый кадр (без cooldown)
-      if(p.en>=w.en){
+      // Гистерезис: при опустошении EN требуется накопить 20 EN для перезапуска
+      if(p._beamDepleted){
+        if(p.en>=20)p._beamDepleted=false;
+        else if(G.sT%15===0)fText(p.x,p.y-12,'NET EN',P.ENL);
+      } else if(p.en>=w.en){
         p.en-=w.en;
         _fireFromWeapon(G,p,w);
-      } else if(G.sT%15===0){
-        fText(p.x,p.y-12,'NET EN',P.ENL);
+        if(p.en<=0)p._beamDepleted=true;
+      } else {
+        p._beamDepleted=true;
+        if(G.sT%15===0)fText(p.x,p.y-12,'NET EN',P.ENL);
       }
     } else if(w.kind==='burst'){
       if(p.sCD===0 && p.burstQueue===0){
@@ -738,7 +745,7 @@ function updSpace(G){
     const pu=G.pups[i];
     pu.x+=pu.vx;pu.y+=pu.vy;pu.vy*=.98;pu.t++;pu.lf--;
     const dx=p.x-pu.x,dy=p.y-pu.y,d=Math.hypot(dx,dy);
-    if(d<60){pu.vx+=dx/d*.5;pu.vy+=dy/d*.5;}
+    if(d<80){pu.vx+=dx/d*1.8;pu.vy+=dy/d*1.8;}
     if(d<10){
       if(pu.type==='shield'){
         p.shield=600;fText(pu.x,pu.y,'SHIELD!',P.CYA);
@@ -758,11 +765,32 @@ function updSpace(G){
     if(pu.x<wbLeft||pu.lf<=0)G.pups.splice(i,1);
   }
 
+  // Дрейфующие пришельцы — редкие встречи в космосе, можно подобрать как рабочего
+  if(!G.spaceAliens)G.spaceAliens=[];
+  if(G.sT%600===0&&G.spaceAliens.length<2&&G.prog>0.05&&G.prog<0.92){
+    G.spaceAliens.push({x:LW+8,y:20+Math.random()*(LH-40),vx:-0.3-Math.random()*0.2,vy:(Math.random()-.5)*0.15,t:0});
+  }
+  for(let i=G.spaceAliens.length-1;i>=0;i--){
+    const al=G.spaceAliens[i];
+    al.x+=al.vx;al.y+=al.vy;al.t++;
+    const dx=p.x-al.x,dy=p.y-al.y,d=Math.hypot(dx,dy);
+    if(d<70){al.vx+=dx/d*0.08;al.vy+=dy/d*0.08;}
+    if(d<12){
+      G.pl.workers++;
+      if(G.ship&&G.ship.workers)G.ship.workers.power++;
+      fText(al.x,al.y-8,'+РАБОЧИЙ',P.PUR);
+      sfxPU();flash(.25,P.PUR);
+      spPts(al.x,al.y,10,[P.PUR,'#aaeeff',P.WHT],.4,2,14);
+      G.spaceAliens.splice(i,1);continue;
+    }
+    if(al.x<-16)G.spaceAliens.splice(i,1);
+  }
+
   // Прогресс полёта
   const spNow=Math.hypot(p.vx,p.vy);
   const fuelMult=sh.fuel>0?1:0.32;
   const travelMult=(1+(boostOn?1.25:0)+Math.min(1,spNow/2.2)*0.35)*fuelMult;
-  G.prog=Math.min(1,G.prog+0.00022*travelMult*_DEV.speedMult);
+  G.prog=Math.min(1,G.prog+0.000183*travelMult*_DEV.speedMult);
 
   // Триггер посадки
   if(G.prog>=1){
@@ -928,6 +956,7 @@ function drwSpace(G){rc(0,0,LW,LH,P.BG);applyShake();drwNebula();drwStars();
   }
   for(const pu of G.pups)drwPowerUp(pu);
   for(const r of G.rits)drwRes(r);
+  if(G.spaceAliens){for(const al of G.spaceAliens)drwAlienSimple(al.x,al.y,al.t,'drift',1);}
   for(const a of G.asts)drwAst(a);
   for(const b of G.buls)drwBul(b);
   for(const e of G.enms)drwEnemy(e);
