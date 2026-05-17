@@ -255,23 +255,27 @@ function updPlanetDrosh(G){
   // Удалили: автозавершение по G.pl.res>=5
   // Удалили: подсказка "Сначала поговори с Клирром" (по сбору ресурсов)
   const droshLaunchOK=!!(G.droshSide&&G.droshSide.done);
-  if(droshLaunchOK&&(KD.KeyL||(USE_TOUCH_UI&&btnJust('launch')))){
-    sfxLand();
-    if(!G.campaignState.planetsCompleted.includes('drosh'))G.campaignState.planetsCompleted.push('drosh');
-    G.campaignState.targetPlanet=PLANETS.drosh.nextPlanet;
-    startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);});
-  }else if(!droshLaunchOK&&(KD.KeyL||(USE_TOUCH_UI&&btnJust('launch')))){
-    // Адресные подсказки в зависимости от стадии квеста
-    if(!G.droshSide||!G.droshSide.questAccepted){
-      G.notif='КВЕСТ НЕ ПРИНЯТ! НАЙДИ КОММЕНДАНТА КЛИРРА.';
-    }else if(!G.droshSide.beacons.every(b=>b.fixed)){
-      const left=G.droshSide.beacons.filter(b=>!b.fixed).length;
-      G.notif='ЗАЖГИ ВСЕ МАЯКИ! ОСТАЛОСЬ '+left;
-    }else if(!G.droshSide.done){
-      G.notif='УДЕРЖИ МАЯКИ ГОРЯЩИМИ! ПРОДОЛЖАЙ!';
+  if(KD.KeyL||(USE_TOUCH_UI&&btnJust('launch'))){
+    if(droshLaunchOK){
+      sfxLand();
+      if(!G.campaignState.planetsCompleted.includes('drosh'))G.campaignState.planetsCompleted.push('drosh');
+      if(!G._visitTargetSet)G.campaignState.targetPlanet=PLANETS.drosh.nextPlanet;
+      G._visitTargetSet=false;
+      startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);});
+    } else if(G._launchWarnT>0){
+      // Второе нажатие — вылет без выполненного квеста
+      sfxLand();
+      if(!G._visitTargetSet)G.campaignState.targetPlanet=PLANETS.drosh.nextPlanet;
+      G._visitTargetSet=false;G._launchWarnT=0;
+      startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);});
+    } else {
+      // Первое нажатие — предупреждение
+      if(!G.droshSide||!G.droshSide.questAccepted){G.notif='КВЕСТ НЕ ПРИНЯТ! НАЖМИ ЕЩЁ РАЗ ДЛЯ ВЫЛЕТА.';}
+      else if(!G.droshSide.done){G.notif='КВЕСТ НЕ ЗАВЕРШЁН! НАЖМИ ЕЩЁ РАЗ ДЛЯ ВЫЛЕТА.';}
+      G.notifT=180;G.notifCol=P.ORA;G._launchWarnT=180;sfxHit();
     }
-    G.notifT=160;G.notifCol=P.RED;sfxHit();
   }
+  if(G._launchWarnT>0)G._launchWarnT--;
   // ★ v16 r5: Поддерживаем G.droshDone как алиас для совместимости с другими местами
   G.droshDone=droshLaunchOK;
   updPts();updFTX();updSHK();
@@ -1194,18 +1198,26 @@ function updPlanetBubblika(G){
     spPts(LW/2,LH/2,20,[P.BUB3,P.YEL,P.WHT],.5,3,25,.02,1.5);flash(.25,P.BUB3);sfxPU();
   }
   // ★ v16 r4: На Бубблике взлететь можно только когда ОБА квеста выполнены
-  if(G.bubblikaDone&&(KD.KeyL||(USE_TOUCH_UI&&btnJust('launch')))){
-    sfxLand();
-    if(!G.campaignState.planetsCompleted.includes('bubblika'))G.campaignState.planetsCompleted.push('bubblika');
-    G.campaignState.targetPlanet=PLANETS.bubblika.nextPlanet;
-    startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);});
-  }else if(!G.bubblikaDone&&(KD.KeyL||(USE_TOUCH_UI&&btnJust('launch')))){
-    // Какого квеста не хватает — даём адресную подсказку
-    if(!pfftDone&&!blabDone)G.notif='ВЫПОЛНИ ОБА КВЕСТА: ПФФФТ И БЛАБ!';
-    else if(!pfftDone)G.notif='ДОСТАВЬ ВСЕ ПОСЫЛКИ ПФФФТА ('+(B.delivery?B.delivery.completed:0)+'/'+(B.delivery?B.delivery.target:5)+')';
-    else G.notif='НАЙДИ БЛАБА И ВОЗЬМИ ЧЕРТЁЖ ЩИТА!';
-    G.notifT=160;G.notifCol=P.RED;sfxHit();
+  if(KD.KeyL||(USE_TOUCH_UI&&btnJust('launch'))){
+    if(G.bubblikaDone){
+      sfxLand();
+      if(!G.campaignState.planetsCompleted.includes('bubblika'))G.campaignState.planetsCompleted.push('bubblika');
+      if(!G._visitTargetSet)G.campaignState.targetPlanet=PLANETS.bubblika.nextPlanet;
+      G._visitTargetSet=false;
+      startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);});
+    } else if(G._launchWarnT>0){
+      sfxLand();
+      if(!G._visitTargetSet)G.campaignState.targetPlanet=PLANETS.bubblika.nextPlanet;
+      G._visitTargetSet=false;G._launchWarnT=0;
+      startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);});
+    } else {
+      if(!pfftDone&&!blabDone)G.notif='КВЕСТЫ НЕ ВЫПОЛНЕНЫ! НАЖМИ ЕЩЁ РАЗ ДЛЯ ВЫЛЕТА.';
+      else if(!pfftDone)G.notif='ПОСЫЛКИ НЕ ДОСТАВЛЕНЫ! НАЖМИ ЕЩЁ РАЗ ДЛЯ ВЫЛЕТА.';
+      else G.notif='ЧЕРТЁЖ ЩИТА НЕ ВЗЯТ! НАЖМИ ЕЩЁ РАЗ ДЛЯ ВЫЛЕТА.';
+      G.notifT=180;G.notifCol=P.ORA;G._launchWarnT=180;sfxHit();
+    }
   }
+  if(G._launchWarnT>0)G._launchWarnT--;
   for(const c of B.clouds){c.x-=c.sp;if(c.x<-c.sz){c.x=LW+c.sz;c.y=30+Math.random()*(LH-40);}}
   updPts();updFTX();updSHK();
 }
@@ -1919,21 +1931,33 @@ function updPlanetKrasnozem(G){
 
   const alive=KZ.scavengers.filter(s=>s.alive).length;
   if(!G.krasDone&&KZ.delivered>=KZ.shells.length&&alive===0&&KZ.shellShots.length===0){
-    G.krasDone=true;KZ.coreReady=true;G.campaignState.inventory.starBattery=true;G.pl.cr+=200;
+    G.krasDone=true;KZ.coreReady=true;G.campaignState.inventory.energyShield=true;G.pl.cr+=200;
     // ★ Phase 5.3: спаситель Краснозёма
     unlockAchievement(G,'krasSave');
     G.pl.men+=40;G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+80);
-    G.notif='ЗВЁЗДНАЯ БАТАРЕЯ ПОЛУЧЕНА! ЭНЕРГИЯ В БОЮ БЕЗ ЛИМИТА.';G.notifT=260;G.notifCol=P.YEL;
+    G.notif='ЭНЕРГОЩИТ ПОЛУЧЕН! В БОЮ ПОДБОР ЭНЕРГИИ ДАЁТ ЩИТ.';G.notifT=260;G.notifCol=P.CYA;
     spPts(LW/2,LH/2,42,[P.YEL,P.WHT,P.KRZ3,P.CYA],1,4,45,.02,2);addShockwave(LW/2,LH/2,42,P.YEL,35);flash(.45,P.YEL);sfxPU();setTimeout(sfxPU,90);setTimeout(sfxPU,180);
   }
 
   if(KD.Tab||btnJust('ship')){startTrans(()=>{G.shipReturnState='planet_krasnozem';G.state='ship_view';G.shipUI='main';G.shipT=0;TAP_FIRE=false;resetBtns();addBtn('back',20,24,10,'<',P.UIT);ALLOW_JOY=false;TOUCH.joyId=-1;TOUCH.joyActive=false;});}
-  if(G.krasDone&&(KD.KeyL||(USE_TOUCH_UI&&btnJust('launch')))){
-    sfxLand();
-    if(!G.campaignState.planetsCompleted.includes('krasnozem'))G.campaignState.planetsCompleted.push('krasnozem');
-    G.campaignState.targetPlanet='center';
-    startTrans(()=>{G.pl.hp=G.pl.mhp;G.pl.en=G.pl.men;G.ship.fuel=100;initSpace(G);});
+  if(KD.KeyL||(USE_TOUCH_UI&&btnJust('launch'))){
+    if(G.krasDone){
+      sfxLand();
+      if(!G.campaignState.planetsCompleted.includes('krasnozem'))G.campaignState.planetsCompleted.push('krasnozem');
+      if(!G._visitTargetSet)G.campaignState.targetPlanet='center';
+      G._visitTargetSet=false;
+      startTrans(()=>{G.pl.hp=G.pl.mhp;G.pl.en=G.pl.men;G.ship.fuel=100;initSpace(G);});
+    } else if(G._launchWarnT>0){
+      sfxLand();
+      if(!G._visitTargetSet)G.campaignState.targetPlanet='center';
+      G._visitTargetSet=false;G._launchWarnT=0;
+      startTrans(()=>{G.pl.hp=G.pl.mhp;G.pl.en=G.pl.men;G.ship.fuel=100;initSpace(G);});
+    } else {
+      G.notif='ЗАДАНИЕ НЕ ЗАВЕРШЕНО! НАЖМИ ЕЩЁ РАЗ ДЛЯ ВЫЛЕТА.';
+      G.notifT=180;G.notifCol=P.ORA;G._launchWarnT=180;sfxHit();
+    }
   }
+  if(G._launchWarnT>0)G._launchWarnT--;
   updPts();updFTX();updSHK();
 }
 

@@ -12,12 +12,11 @@
 //   ещё использует только два уровня.
 // ============================================================
 const WEAPONS=[
-  {id:'l1',     idx:0, name:'ЛАЗЕР L1', short:'L1', dmg:2,   en:10, cd:7,  kind:'simple',  col:P.L1,  lv:1, vx:7, range:52, legacyWep:1},
-  {id:'spread', idx:1, name:'СПРЕД',     short:'SPR',dmg:1,   en:18, cd:14, kind:'spread',  col:P.L1L, lv:1, vx:6, range:40, legacyWep:1},
-  {id:'missile',idx:2, name:'РАКЕТА',    short:'MSL',dmg:5,   en:25, cd:30, kind:'missile', col:P.ORA, lv:1, vx:3, range:90, legacyWep:1},
-  {id:'l2',     idx:3, name:'ЛАЗЕР L2', short:'L2', dmg:10,  en:44, cd:28, kind:'simple',  col:P.L3,  lv:3, vx:5, range:40, legacyWep:2},
-  {id:'beam',   idx:4, name:'ЛУЧ',       short:'BMM',dmg:0.5, en:1,  cd:0,  kind:'beam',    col:P.L2,  lv:1, vx:14,range:24, legacyWep:2},
-  {id:'burst',  idx:5, name:'БЁРСТ',     short:'BST',dmg:3,   en:50, cd:36, kind:'burst',   col:P.YEL, lv:2, vx:7, range:50, legacyWep:2},
+  {id:'l1',     idx:0, name:'ЛАЗЕР L1', short:'L1', dmg:2,    en:10, cd:7,  kind:'simple',  col:P.L1,  lv:1, vx:7, range:52, legacyWep:1},
+  {id:'spread', idx:1, name:'СПРЕД',     short:'SPR',dmg:1,    en:18, cd:14, kind:'spread',  col:P.L1L, lv:1, vx:6, range:40, legacyWep:1},
+  {id:'missile',idx:2, name:'РАКЕТА',    short:'MSL',dmg:5,    en:25, cd:30, kind:'missile', col:P.ORA, lv:1, vx:3, range:90, legacyWep:1},
+  {id:'l2',     idx:3, name:'ЛАЗЕР L2', short:'L2', dmg:10,   en:44, cd:28, kind:'simple',  col:P.L3,  lv:3, vx:5, range:40, legacyWep:2},
+  {id:'beam',   idx:4, name:'ЛУЧ',       short:'BMM',dmg:0.17, en:1,  cd:0,  kind:'beam',    col:P.L2,  lv:1, vx:14,range:24, legacyWep:2},
 ];
 
 // Разблокировано ли оружие по индексу WEAPONS
@@ -29,7 +28,6 @@ function _wepUnlocked(G,idx){
     case 2: return !!inv.missileUnlocked;
     case 3: return !!inv.laserStrong;
     case 4: return !!inv.beamUnlocked;
-    case 5: return !!inv.burstUnlocked;
   }
   return false;
 }
@@ -249,8 +247,8 @@ function updSpace(G){
   if(sh.fuel<1&&G.sT%120===0){G.notif='ТОПЛИВО КОНЧИЛОСЬ: АВАРИЙНЫЙ ХОД X0.3';G.notifT=90;G.notifCol=P.RED;sfxHit();}
   else if(sh.fuel<15&&G.sT%180===0){G.notif='КРИТИЧНЫЙ ТОПЛИВО! ЗАГРУЗИ РЕСУРСЫ НА КОРАБЛЬ';G.notifT=110;G.notifCol=P.RED;}
   else if(sh.fuel<30&&G.sT%200===0){G.notif='ТОПЛИВО КОНЧАЕТСЯ... ОСТАЛОСЬ: '+Math.floor(sh.fuel)+'%';G.notifT=80;G.notifCol=P.ORA;}
-  // Power-room регенерирует энергию (1 рабочий = +0.18 EN/кадр)
-  p.en=Math.min(p.men,p.en+.18*_sw.power);
+  // Power-room регенерирует энергию (1 рабочий = +0.144 EN/кадр)
+  p.en=Math.min(p.men,p.en+.144*_sw.power);
   // Workshop-room продвигает крафт-очередь (1 рабочий = +1 ед/кадр)
   if(_sw.workshop>0&&G.ship.craftQueue&&G.ship.craftQueue.length>0){
     const item=G.ship.craftQueue[0];
@@ -313,10 +311,17 @@ function updSpace(G){
   if(K.KeyD||K.ArrowRight)ix+=1;
   if(USE_TOUCH_UI&&TOUCH.joyActive){ix=TOUCH.joyDX;iy=TOUCH.joyDY;}
   const il=Math.hypot(ix,iy)||1;
-  const boostOn=(K.ShiftLeft||btnHeld('boost'))&&p.en>10&&sh.fuel>1;
-  const thrust=boostOn?.55:.35;
+  const boostOn=(K.ShiftLeft||btnHeld('boost'))&&p.en>10&&sh.fuel>20;
+  // Топливо влияет на тягу: <20% → тяга 60%, <50% → нет буста
+  const fuelFrac=sh.fuel/100;
+  const thrustMult=fuelFrac<0.2?0.6:1;
+  const thrust=(boostOn?.55:.35)*thrustMult;
   if(boostOn){p.en-=.5;sh.fuel=Math.max(0,sh.fuel-.055);p.boost=4;}
   if((ix||iy)&&sh.fuel>0)sh.fuel=Math.max(0,sh.fuel-.018);
+  // Предупреждение: буст недоступен при топливе <20%
+  if(sh.fuel>1&&sh.fuel<=20&&(K.ShiftLeft||btnHeld('boost'))&&G.sT%40===0){
+    G.notif='ТОПЛИВА МАЛО — БУСТ НЕДОСТУПЕН!';G.notifT=60;G.notifCol=P.ORA;
+  }
   p.vx+=(ix/il)*thrust*(ix?1:0);
   p.vy+=(iy/il)*thrust*(iy?1:0);
   // ★ v22 Drift: если только что отпустили буст — держим инерцию 30 кадров (медленнее трение)
@@ -767,18 +772,29 @@ function updSpace(G){
 
   // Дрейфующие пришельцы — редкие встречи в космосе, можно подобрать как рабочего
   if(!G.spaceAliens)G.spaceAliens=[];
-  if(G.sT%600===0&&G.spaceAliens.length<2&&G.prog>0.05&&G.prog<0.92){
+  if(G.sT%1800===0&&G.spaceAliens.length<2&&G.prog>0.05&&G.prog<0.92){
     G.spaceAliens.push({x:LW+8,y:20+Math.random()*(LH-40),vx:-0.3-Math.random()*0.2,vy:(Math.random()-.5)*0.15,t:0});
   }
   for(let i=G.spaceAliens.length-1;i>=0;i--){
     const al=G.spaceAliens[i];
     al.x+=al.vx;al.y+=al.vy;al.t++;
     const dx=p.x-al.x,dy=p.y-al.y,d=Math.hypot(dx,dy);
-    if(d<70){al.vx+=dx/d*0.08;al.vy+=dy/d*0.08;}
+    if(d<70){al.vx+=dx/d*0.22;al.vy+=dy/d*0.22;}
+    // Пуля отталкивает пришельца (чтобы случайно не убили нажатием огня)
+    for(const b of G.buls){
+      const bdx=al.x-b.x,bdy=al.y-b.y,bd=Math.hypot(bdx,bdy);
+      if(bd<12){
+        const force=2+Math.random()*2;
+        al.vx+=(bdx/bd||0)*force;al.vy+=(bdy/bd||0)*force;
+      }
+    }
     if(d<12){
       G.pl.workers++;
       if(G.ship&&G.ship.workers)G.ship.workers.power++;
-      fText(al.x,al.y-8,'+РАБОЧИЙ',P.PUR);
+      const isFirst=!G._reygarFirst;
+      G._reygarFirst=true;
+      const msg=isFirst?'ЗОРП ЗАВЕРБОВАЛ РЕЙГАРА!':'РЕЙГАР ПРИСОЕДИНИЛСЯ!';
+      fText(al.x,al.y-10,msg,P.PUR);
       sfxPU();flash(.25,P.PUR);
       spPts(al.x,al.y,10,[P.PUR,'#aaeeff',P.WHT],.4,2,14);
       G.spaceAliens.splice(i,1);continue;

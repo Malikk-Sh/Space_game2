@@ -128,9 +128,9 @@ function updTinaBattle(G){
     }
   }
 
-  // ★ Звёздная батарея: бесконечная энергия
-  if(G.campaignState.inventory.starBattery){
-    p.en=p.men;
+  // Энергетический щит: энергия восстанавливается быстрее
+  if(G.campaignState.inventory.energyShield){
+    p.en=Math.min(p.men,p.en+0.3);
   }
 
   // Движение ТИНЫ (медленное в фазе 1, активнее дальше)
@@ -1163,7 +1163,7 @@ function updFinalePowerUps(G){
     if(d<14){
       if(pu.type==='shield'){p.shield=720;fText(pu.x,pu.y,'SHIELD!',P.CYA);}
       else if(pu.type==='health'){p.hp=Math.min(p.mhp,p.hp+45);fText(pu.x,pu.y,'+45HP',P.HPH);}
-      else{p.en=Math.min(p.men,p.en+70);fText(pu.x,pu.y,'OVERCHARGE',P.EN);if(G.campaignState.inventory.starBattery)p.shield=Math.max(p.shield,180);}
+      else{p.en=Math.min(p.men,p.en+70);fText(pu.x,pu.y,'OVERCHARGE',P.EN);if(G.campaignState.inventory.energyShield)p.shield=Math.max(p.shield,240);}
       sfxPU();flash(.25,pu.type==='shield'?P.CYA:pu.type==='health'?P.HP:P.EN);
       spPts(pu.x,pu.y,16,[pu.type==='shield'?P.CYA:pu.type==='health'?P.HP:P.EN,P.WHT],.5,2.7,24);
       addShockwave(pu.x,pu.y,18,pu.type==='shield'?P.CYA:pu.type==='health'?P.HP:P.EN);
@@ -1304,11 +1304,11 @@ function updFinaleTina(G){
   if(K.KeyA||K.ArrowLeft)ix-=1;if(K.KeyD||K.ArrowRight)ix+=1;
   if(USE_TOUCH_UI&&TOUCH.joyActive){ix=TOUCH.joyDX;iy=TOUCH.joyDY;}
   const il=Math.hypot(ix,iy)||1;
-  const hasBattery=G.campaignState.inventory.starBattery;
-  const boostOn=(K.ShiftLeft||btnHeld('boost'))&&(hasBattery||p.en>10);
+  const hasBattery=G.campaignState.inventory.energyShield;
+  const boostOn=(K.ShiftLeft||btnHeld('boost'))&&p.en>10;
   // ★ v16 r12 #6 / v20: Скорости игрока в бою на 36% меньше оригинала (−20% ещё раз)
   const thrust=boostOn?.40:.25;
-  if(boostOn){if(!hasBattery)p.en-=.5;p.boost=4;}
+  if(boostOn){p.en-=.5;p.boost=4;}
   p.vx+=(ix/il)*thrust*(ix?1:0);p.vy+=(iy/il)*thrust*(iy?1:0);
   p.vx*=.86;p.vy*=.86;
   const _spMult=1+(G.campaignState?.upgrades?.speed||0)*0.1;
@@ -1362,7 +1362,7 @@ function updFinaleTina(G){
     // Во время starWaiting не стреляем и не запускаем остальную логику Тины
     return;
   }
-  if(hasBattery){p.en=p.men;}else{p.en=Math.min(p.men,p.en+.15);}
+  p.en=Math.min(p.men,p.en+.15);
   if(p.shield>0)p.shield--;
   // ★ БАГ-ФИКС: декремент кадров неуязвимости в финале.
   // Без этого после первого попадания p.inv остаётся >0 и блокирует все последующие удары.
@@ -1391,19 +1391,18 @@ function updFinaleTina(G){
     if(!w){
       // Fallback на legacy-логику, если WEAPONS почему-то не загружен
       const ec=[10,44][p.wep-1],cd=[7,28][p.wep-1];
-      if((hasBattery||p.en>=ec)&&p.sCD===0){
-        if(!hasBattery)p.en-=ec;p.sCD=cd;
+      if(p.en>=ec&&p.sCD===0){
+        p.en-=ec;p.sCD=cd;
         G.buls.push({x:p.x+12,y:p.y,vx:[7,5][p.wep-1],vy:0,lv:p.wep===2?3:1,lf:160,dmg:[2,10][p.wep-1]*_DEV.dmgMult,t:0});
         sfxL(p.wep);
         if(p.wep===2){shake(2.5);flash(.2,P.L3L);}
       }
     } else if(w.kind==='beam'){
       if(p._beamDepleted){
-        if(!hasBattery&&p.en>=20)p._beamDepleted=false;
-        else if(hasBattery)p._beamDepleted=false;
+        if(p.en>=20)p._beamDepleted=false;
         else if(G.sT%15===0)fText(p.x,p.y-12,'NET EN',P.ENL);
-      } else if(hasBattery||p.en>=w.en){
-        if(!hasBattery){p.en-=w.en;if(p.en<=0)p._beamDepleted=true;}
+      } else if(p.en>=w.en){
+        p.en-=w.en;if(p.en<=0)p._beamDepleted=true;
         // В финале луч летит дальше (rangeBoost=4)
         _fireFromWeapon(G,p,w,4);
         // Перезаписываем lf и t у только что вставленной пули (для совместимости с финалом)
@@ -1412,16 +1411,9 @@ function updFinaleTina(G){
         p._beamDepleted=true;
         if(G.sT%15===0)fText(p.x,p.y-12,'NET EN',P.ENL);
       }
-    } else if(w.kind==='burst'){
-      if(p.sCD===0&&p.burstQueue===0){
-        if(hasBattery||p.en>=w.en){
-          if(!hasBattery)p.en-=w.en;p.sCD=w.cd;
-          p.burstQueue=5;p.burstNext=0;shake(2);
-        } else if(G.sT%15===0)fText(p.x,p.y-12,'NET EN',P.ENL);
-      }
     } else if(p.sCD===0){
-      if(hasBattery||p.en>=w.en){
-        if(!hasBattery)p.en-=w.en;p.sCD=w.cd;
+      if(p.en>=w.en){
+        p.en-=w.en;p.sCD=w.cd;
         _fireFromWeapon(G,p,w,4);
         // Финал ожидает t:0 и vy:0 на пулях
         const last=G.buls[G.buls.length-1];

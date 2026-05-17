@@ -6,15 +6,15 @@
 // ============================================================
 
 
-function newGame(){return{state:'menu',menuT:0,menuSt:[],pl:{x:50,y:LH/2,vx:0,vy:0,hp:240,mhp:240,en:120,men:150,wep:1,cr:0,res:0,workers:2,sCD:0,thrT:0,inv:0,shield:0,boost:0,squash:0,drift:0,boostWas:false,autoFire:false},asts:[],buls:[],rits:[],enms:[],ebuls:[],pups:[],sT:0,prog:0,appr:false,landT:0,astST:40,enmST:240,npcs:[],pc:{x:90,y:90,facing:1,wt:0},dlg:null,dlgChar:0,droshDone:false,zorpRec:false,bubblikaDone:false,krasnozemDone:false,notif:null,notifT:0,notifCol:P.CYA,qrw:null,shipT:0,goT:0,combo:0,comboT:0,transIn:60,transOut:0,transNext:null,shipReturnState:'planet_drosh',paused:false,pauseSel:0,
+function newGame(){return{state:'menu',menuT:0,menuSt:[],pl:{x:50,y:LH/2,vx:0,vy:0,hp:240,mhp:240,en:120,men:150,wep:1,cr:0,res:0,workers:1,sCD:0,thrT:0,inv:0,shield:0,boost:0,squash:0,drift:0,boostWas:false,autoFire:false},asts:[],buls:[],rits:[],enms:[],ebuls:[],pups:[],sT:0,prog:0,appr:false,landT:0,astST:40,enmST:240,npcs:[],pc:{x:90,y:90,facing:1,wt:0},dlg:null,dlgChar:0,droshDone:false,zorpRec:false,bubblikaDone:false,krasnozemDone:false,notif:null,notifT:0,notifCol:P.CYA,qrw:null,shipT:0,goT:0,combo:0,comboT:0,transIn:60,transOut:0,transNext:null,shipReturnState:'planet_drosh',paused:false,pauseSel:0,
   // Туториал — массив подсказок текущей сцены. null когда туториала нет.
   tutorial:null,
-  campaignState:{currentPlanet:'drosh',targetPlanet:'drosh',planetsVisited:[],planetsCompleted:[],inventory:{krokRecords:false,bubblikaContract:false,laserBlueprint:false,laserStrong:false,shieldBlueprint:false,shieldBuilt:false,starBattery:false,spreadUnlocked:false,missileUnlocked:false,beamUnlocked:false,burstUnlocked:false,starMap:false},materials:0,inventory_extra:{},
+  campaignState:{currentPlanet:'drosh',targetPlanet:'drosh',planetsVisited:[],planetsCompleted:[],inventory:{krokRecords:false,bubblikaContract:false,laserBlueprint:false,laserStrong:false,shieldBlueprint:false,shieldBuilt:false,starBattery:false,energyShield:false,spreadUnlocked:false,missileUnlocked:false,beamUnlocked:false,starMap:false},materials:0,inventory_extra:{},
     // ★ PR D: постоянные апгрейды (sink для КР/РЕС в конце игры)
     upgrades:{hp:0,en:0,workers:0,speed:0,dmg:0},flags:{pfftGifted:false,droshSideDone:false,bubSideDone:false,
     // Флаги показа туториалов (один раз)
-    tutSpaceShown:false,tutDroshShown:false,tutShipShown:false,
-  }},ship:{fuel:70,decor:0,workers:{power:2,fuel:0,bridge:0,workshop:0},craftQueue:[]},
+    tutSpaceShown:false,tutDroshShown:false,tutShipShown:false,tutWorkshopShown:false,tutWorkersShown:false,tutMapShown:false,tutFuelShown:false,
+  }},ship:{fuel:70,decor:0,workers:{power:1,fuel:0,bridge:0,workshop:0},craftQueue:[]},
   // ★ PR C: текущий экран корабля — 'main' | 'workshop' | 'workers' (сбрасывается на 'main' при входе)
   shipUI:'main',
   // ★ Phase 5.3: ачивки + аккумулирующие счётчики
@@ -35,7 +35,7 @@ function newGame(){return{state:'menu',menuT:0,menuSt:[],pl:{x:50,y:LH/2,vx:0,vy
 function ensureShipWorkers(G){
   if(!G.ship)return;
   if(!G.ship.workers){
-    G.ship.workers={power:G.pl?G.pl.workers||2:2,fuel:0,bridge:0,workshop:0};
+    G.ship.workers={power:G.pl?G.pl.workers||1:1,fuel:0,bridge:0,workshop:0};
   }
   if(!G.ship.craftQueue){G.ship.craftQueue=[];}
   // Sanity: общая сумма должна равняться G.pl.workers; если нет — корректируем power.
@@ -54,6 +54,7 @@ function reallocWorkers(G,room,delta){
   ensureShipWorkers(G);
   const w=G.ship.workers;
   if(delta>0){
+    if(w[room]>=5)return false; // лимит 5 рабочих на отсек
     let donor=null,maxC=0;
     for(const r of ['power','fuel','bridge','workshop']){
       if(r===room)continue;
