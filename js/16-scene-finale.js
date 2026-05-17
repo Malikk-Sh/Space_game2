@@ -1261,26 +1261,14 @@ function updFinaleTina(G){
         F.catPickT++;
         F.catX+=(p.x+10-F.catX)*0.2;
         F.catY+=(p.y-F.catY)*0.2;
-        // ★ Phase 3.2: после сцены с котом — прощальная сцена с Райгаром (вместо прямого перехода к титрам)
         if(F.catPickT>480&&!F.epilogueStarted){
           F.epilogueStarted=true;mC=false;
-          startTrans(()=>{F.farewell={t:0,done:false};sfxEmotional();});
+          startTrans(()=>initVictoryScreen(G));
         }
         if(F.catPickT>80&&(KD.Enter||KD.Space||mC||btnJust('int'))&&!F.epilogueStarted){
           F.epilogueStarted=true;mC=false;
-          startTrans(()=>{F.farewell={t:0,done:false};sfxEmotional();});
+          startTrans(()=>initVictoryScreen(G));
         }
-      }
-      return;
-    }
-    // ★ Phase 3.2: фаза прощания с Райгаром — пауза перед титрами
-    if(F.farewell&&!F.farewell.done){
-      F.farewell.t++;
-      const t=F.farewell.t;
-      // Через ~10 сек автоматом или ENTER/тап после 90 кадров → титры
-      if(t>600||((KD.Enter||KD.Space||mC||btnJust('int'))&&t>90)){
-        F.farewell.done=true;mC=false;
-        startTrans(()=>initVictoryScreen(G));
       }
       return;
     }
@@ -1794,55 +1782,6 @@ function drwFinaleTina(G){
     }
 
     drwPts();drwSHK();drwFTX();drawFlash();clearShake();drawTrans();return;
-  }
-
-  // ★ Phase 3.2: финальная сцена с Райгаром — портрет + текст
-  if(F.farewell&&!F.farewell.done){
-    const ft=F.farewell.t;
-    rc(0,0,LW,LH,'#000');
-    drwStars();
-    // Туманное свечение фоном
-    const ga=Math.min(1,ft/40);
-    cx.globalAlpha=ga*.35;
-    disc(LW/2,LH/2-18,40+(ft%60)/2,'#1a2245');
-    cx.globalAlpha=1;
-    // Портрет Райгара — крупно, по центру (drwAlien без масштаба тут мал, используем scale)
-    if(ft>10){
-      const aA=Math.min(1,(ft-10)/40);
-      cx.globalAlpha=aA;
-      cx.save();
-      cx.translate(LW/2,LH/2-22);
-      cx.scale(2,2);
-      drwAlien(0,0,ft,'sit',1);
-      cx.restore();
-      cx.globalAlpha=1;
-    }
-    // Имя
-    if(ft>50){
-      const aN=Math.min(1,(ft-50)/30);
-      cx.globalAlpha=aN;
-      txcs('РАЙГАР',LH/2+22,P.CYA,P.BLK,1);
-      cx.globalAlpha=1;
-    }
-    // Печать реплики
-    if(ft>90){
-      const startType=90,TYPE_RATE=1.6;
-      const lines=['ТЫ СДЕЛАЛ ЭТО.','СВЕТ ВЕРНУЛСЯ.'];
-      const totalChars=lines.reduce((s,l)=>s+l.length,0);
-      const charsToShow=Math.min(totalChars,Math.floor((ft-startType)/TYPE_RATE));
-      let drawn=0;
-      for(let i=0;i<lines.length;i++){
-        const ln=lines[i];
-        const vis=ln.substring(0,Math.max(0,charsToShow-drawn));
-        if(vis.length>0)txcs(vis,LH/2+38+i*12,P.YEL,P.BLK,1);
-        drawn+=ln.length;
-      }
-    }
-    // Подсказка на пропуск
-    if(ft>180&&Math.floor(ft/22)%2){
-      txcs(USE_TOUCH_UI?'ТАП - ДАЛЬШЕ':'ENTER - ДАЛЬШЕ',LH-12,P.UIT2,P.BLK,1);
-    }
-    drwPts();drawFlash();drawTrans();return;
   }
 
   // Фон — центр системы

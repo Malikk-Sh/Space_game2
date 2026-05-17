@@ -250,8 +250,7 @@ function updSpace(G){
     else if(sh.fuel>0&&G.sT%350===0){G.notif='ЗАЙДИ В КОРАБЛЬ ЧТОБЫ ЗАПРАВИТЬ БАК!';G.notifT=120;G.notifCol=P.ORA;}
   } else if(sh.fuel<30&&G.sT%500===0){G.notif='ТОПЛИВО КОНЧАЕТСЯ... ОСТАЛОСЬ: '+Math.floor(sh.fuel)+'%';G.notifT=90;G.notifCol=P.ORA;}
   // Power-room регенерирует энергию (1 рабочий = +0.225 EN/кадр); вдвое медленнее без топлива
-  // Лимит убран — энергия накапливается свободно (механика без ограничения звёздной батареи)
-  p.en=Math.min(9999,p.en+.225*(sh.fuel<=0?0.5:1)*_sw.power);
+  p.en=Math.min(p.men,p.en+.225*(sh.fuel<=0?0.5:1)*_sw.power);
   // Bridge workers пассивно восстанавливают HP корабля (0.01 HP/кадр за рабочего)
   if(_sw.bridge>0)p.hp=Math.min(p.mhp,p.hp+_sw.bridge*0.01);
   // Workshop-room продвигает крафт-очередь (1 рабочий = +1 ед/кадр)
