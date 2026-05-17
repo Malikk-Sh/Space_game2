@@ -45,8 +45,7 @@ function zorpGraph(){
     const z=G.npcs.find(n=>n.id==='zorp');
     if(z&&!z.rec){
       z.rec=true;G.zorpRec=true;G.pl.workers++;
-      // ★ Phase 2.4: новый рабочий по умолчанию идёт в Power
-      ensureShipWorkers(G);G.ship.workers.power++;
+      addWorkerToShip(G);
       G.notif='+1 РАБОЧИЙ НА ЭЛЕКТРОСТАНЦИИ! ЭНЕРГИЯ ВОССТАНАВЛИВАЕТСЯ БЫСТРЕЕ.';
       G.notifT=200;G.notifCol=P.GRN;
       sfxPU();setTimeout(sfxPU,80);

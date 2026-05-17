@@ -47,6 +47,17 @@ function ensureShipWorkers(G){
   }
 }
 
+// Helper: add one new worker to the ship, placing them in the first room with <5 workers.
+// Preferred order: power → workshop → fuel → bridge.
+function addWorkerToShip(G){
+  ensureShipWorkers(G);
+  const w=G.ship.workers;
+  for(const r of ['power','workshop','fuel','bridge']){
+    if(w[r]<5){w[r]++;return;}
+  }
+  w.power++; // all rooms at cap — still add (shouldn't happen normally)
+}
+
 // ★ Phase 2.4: перемещение 1 рабочего между комнатами (used by ship UI).
 //   delta=+1 — взять у самой «густой» (>0) другой комнаты и положить сюда.
 //   delta=-1 — отдать в Power (или Fuel если room уже Power).
