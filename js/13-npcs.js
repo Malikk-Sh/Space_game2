@@ -201,26 +201,26 @@ function drwNPC(n,pcx,pcy,t){
   const npcCanWalk=n.walking&&distToPlayer>30&&!n.near;
   // Zorp — бегун: двигается быстрее и почти не отдыхает
   const isRunner=n.id==='zorp';
-  const moveSp=isRunner?0.65:0.25;
-  const pauseChance=isRunner?0.0015:0.005;
-  if(npcCanWalk){
-    n._wT++;
-    if(n._wWait>0)n._wWait--;
-    else{
-      // Двигаемся в текущем направлении
-      n.x+=n._wDir*moveSp;
-      n._wFacing=n._wDir;
-      // Если ушли слишком далеко от дома — разворачиваем
-      if(n.x<n._homeX-n._wRadius){n._wDir=1;n._wWait=isRunner?5+((Math.random()*15)|0):20+((Math.random()*40)|0);}
-      else if(n.x>n._homeX+n._wRadius){n._wDir=-1;n._wWait=isRunner?5+((Math.random()*15)|0):20+((Math.random()*40)|0);}
-      // Случайные паузы
-      else if(Math.random()<pauseChance){n._wWait=isRunner?5+((Math.random()*15)|0):20+((Math.random()*60)|0);if(Math.random()<0.5)n._wDir*=-1;}
-    }
+  const moveSp=isRunner?0.65:0.42;
+  const pauseChance=isRunner?0.0015:0.004;
+  // Таймер и пауза обновляются всегда — так ноги анимируются даже рядом с игроком
+  n._wT++;
+  if(n._wWait>0)n._wWait--;
+  else if(npcCanWalk){
+    // Двигаемся в текущем направлении
+    n.x+=n._wDir*moveSp;
+    n._wFacing=n._wDir;
+    // Если ушли слишком далеко от дома — разворачиваем
+    if(n.x<n._homeX-n._wRadius){n._wDir=1;n._wWait=isRunner?5+((Math.random()*15)|0):10+((Math.random()*25)|0);}
+    else if(n.x>n._homeX+n._wRadius){n._wDir=-1;n._wWait=isRunner?5+((Math.random()*15)|0):10+((Math.random()*25)|0);}
+    // Случайные паузы
+    else if(Math.random()<pauseChance){n._wWait=isRunner?5+((Math.random()*15)|0):8+((Math.random()*30)|0);if(Math.random()<0.5)n._wDir*=-1;}
   }
   n.near=Math.abs(pcx-n.x)<22&&Math.abs(pcy-n.y)<22;
   const facing=n._wFacing||1;
   const blink=Math.floor(t/60)%4===0;
-  const walkPhase=npcCanWalk&&n._wWait<=0;
+  // walkPhase не зависит от дистанции — ноги всегда двигаются когда NPC "хочет" идти
+  const walkPhase=n.walking&&n._wWait<=0;
   // Blab бежит — быстрее анимация ног и подскок
   const legCycle=isRunner?5:8;
   // ★ Увеличенная амплитуда шага: раньше ±3/±2 — почти незаметно. Теперь шаг хорошо виден.
@@ -291,7 +291,8 @@ function drwNPC_Generic(x,y,t,facing,blink,walking,legOff,col){
 // КЛИРР — комендант в военной форме с фуражкой
 function drwNPC_Klirr(x,y,t,f,blink,walking,legOff){
   // Ноги в сапогах
-  cx.fillStyle='#222';rc(x-3+legOff,y,3,3,'#222');rc(x+1-legOff,y,3,3,'#222');
+  rc(x-3+legOff,y,3,3,'#222');rc(x+1-legOff,y,3,3,'#222');
+  rc(x-3+legOff,y+2,3,1,'#554422');rc(x+1-legOff,y+2,3,1,'#554422'); // сапоги
   // Тёмно-зелёная форма с поясом
   rc(x-4,y-9,9,9,'#3a5c3a');rc(x-4,y-1,9,1,'#1a2a1a');// пояс
   rc(x-4,y-9,9,1,'#557755');// плечи светлее
@@ -341,7 +342,8 @@ function drwNPC_Zorp(x,y,t,f,blink,walking,legOff){
 // КРОК — пожилой астроном с очками и блокнотом
 function drwNPC_Krok(x,y,t,f,blink,walking,legOff){
   // Ноги в сандалиях
-  rc(x-3+legOff,y,3,2,'#664422');rc(x+1-legOff,y,3,2,'#664422');
+  rc(x-3+legOff,y,3,3,'#664422');rc(x+1-legOff,y,3,3,'#664422');
+  rc(x-3+legOff,y+2,3,1,'#886633');rc(x+1-legOff,y+2,3,1,'#886633'); // подошвы
   // Серая роба учёного
   rc(x-4,y-9,9,9,'#aaaaaa');rc(x-4,y-9,9,1,'#888888');
   // Карман с блокнотом
