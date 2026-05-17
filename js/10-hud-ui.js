@@ -6,7 +6,7 @@
 // ============================================================
 
 function drwWorkerHUD(G){if(USE_TOUCH_UI){const bx=LW-20,by=4,t=G.sT;const run=Math.floor(t/6)%4;cx.fillStyle=P.SH1;cx.fillRect(bx,by+2,2,3);cx.fillRect(bx,by,2,2);if(run===0){cx.fillRect(bx-1,by+5,1,2);cx.fillRect(bx+2,by+5,1,2);}else{cx.fillRect(bx-1,by+5,1,2);cx.fillRect(bx+2,by+5,2,1);}txt('+'+G.pl.workers,bx+4,by+1,P.EN,1);return;}}
-function drwHUD(G){const p=G.pl;rc(0,0,LW,16,P.UIB);rc(0,15,LW,1,P.DIM);txt('ХП',2,3,P.UIT2,1);bar(14,3,42,5,p.hp/p.mhp,p.hp/p.mhp<.3?P.HPH:P.HP,P.HPB,P.DIM);txt('ЭН',2,10,P.UIT2,1);bar(14,10,42,4,p.en/p.men,p.en<20?P.ENL:P.EN,P.DIM2,P.DIM);let ix=58;if(p.shield>0){const a=.6+.4*Math.sin(G.sT*.2);cx.globalAlpha=a;ring(ix+2,5,3,P.CYA,1);cx.globalAlpha=1;bar(ix,9,5,1,p.shield/600,P.CYA,P.DIM2);ix+=8;}const pbx=Math.max(62,ix),pby=4,pbw=140-(ix-62);rc(pbx,pby,pbw,6,P.SCAN);const fw=Math.floor(pbw*G.prog);rc(pbx,pby,fw,6,P.PL1);if(fw>1)rc(pbx,pby,fw,1,P.PL2);cx.strokeStyle=P.DIM;cx.lineWidth=.5;cx.strokeRect(pbx+.5,pby+.5,pbw-1,5);const boostPix=(G.pl.boost>0)?2:0;const shipPx=pbx+Math.max(0,Math.min(pbw-3,(fw-3)+boostPix));rc(shipPx,pby,3,1,P.CYA);rc(shipPx+1,pby+1,2,1,P.WHT);rc(shipPx,pby+2,3,1,P.CYA);const destInfo=PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh;txt(destInfo.name,pbx+pbw+2,pby-1,P.PL2,1);if(G.combo>1){const cxx=pbx+pbw+2;txs('x'+G.combo,cxx,pby+5,G.combo>=5?P.YEL:P.UIT2,P.BLK,1);}/* ★ Phase 2.2: 6 слотов оружия. Активное — название+стоимость EN.
+function drwHUD(G){const p=G.pl;rc(0,0,LW,16,P.UIB);rc(0,15,LW,1,P.DIM);txt('ХП',2,3,P.UIT2,1);bar(14,3,42,5,p.hp/p.mhp,p.hp/p.mhp<.3?P.HPH:P.HP,P.HPB,P.DIM);txt('ЭН',2,10,P.UIT2,1);bar(14,10,42,4,Math.min(1,p.en/p.men),p.en<20?P.ENL:P.EN,P.DIM2,P.DIM);let ix=58;if(p.shield>0){const a=.6+.4*Math.sin(G.sT*.2);cx.globalAlpha=a;ring(ix+2,5,3,P.CYA,1);cx.globalAlpha=1;bar(ix,9,5,1,p.shield/600,P.CYA,P.DIM2);ix+=8;}const pbx=Math.max(62,ix),pby=4,pbw=140-(ix-62);rc(pbx,pby,pbw,6,P.SCAN);const fw=Math.floor(pbw*G.prog);rc(pbx,pby,fw,6,P.PL1);if(fw>1)rc(pbx,pby,fw,1,P.PL2);cx.strokeStyle=P.DIM;cx.lineWidth=.5;cx.strokeRect(pbx+.5,pby+.5,pbw-1,5);const boostPix=(G.pl.boost>0)?2:0;const shipPx=pbx+Math.max(0,Math.min(pbw-3,(fw-3)+boostPix));rc(shipPx,pby,3,1,P.CYA);rc(shipPx+1,pby+1,2,1,P.WHT);rc(shipPx,pby+2,3,1,P.CYA);const destInfo=PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh;txt(destInfo.name,pbx+pbw+2,pby-1,P.PL2,1);if(G.combo>1){const cxx=pbx+pbw+2;txs('x'+G.combo,cxx,pby+5,G.combo>=5?P.YEL:P.UIT2,P.BLK,1);}/* ★ Phase 2.2: 6 слотов оружия. Активное — название+стоимость EN.
    Под названием — компактная панель индикаторов 1..6: заблокированные тусклые, разблокированные цветные, текущий обведён жёлтым. */
 const _haveWeapons=(typeof WEAPONS!=='undefined');
 const activeIdxNew=_haveWeapons?(p.wepIdx||0):0;
@@ -39,7 +39,24 @@ if(!USE_TOUCH_UI){
   cx.fillRect(wi+3,wiy+2,1,2);                      // bar
   cx.fillRect(wi+3,wiy+5,1,1);                      // dot
   cx.globalAlpha=1;
-}cx.globalAlpha=1;if(G.ship.craftQueue&&G.ship.craftQueue.length>0){const cq=G.ship.craftQueue[0];const pct=(cq.progress/cq.total*100)|0;cx.globalAlpha=.92;rc(2,fy+8,54,7,P.UIB);txt('КРАФТ',4,fy+9,P.UIT2,1);bar(25,fy+9,28,4,cq.progress/cq.total,P.YEL,P.DIM2,P.DIM);txs(pct+'%',56,fy+9,P.YEL,P.BLK,1);cx.globalAlpha=1;}}drwWorkerHUD(G);}
+}cx.globalAlpha=1;
+// Стрелка-подсказка «зайди в корабль» при топливе <20%
+if(G.ship.fuel<20&&G.state==='space'){
+  const p2=0.55+0.45*Math.abs(Math.sin(G.sT*0.1));
+  cx.globalAlpha=p2;
+  const hc=G.ship.fuel<5?P.RED:'#ff9922';
+  // Позиция: справа от топливной панели, стрелка → вниз-вправо к кнопке корабля
+  const ax=58,ay=fy+1;
+  // Текстовая подсказка
+  txs(USE_TOUCH_UI?'→S':'TAB',ax+12,ay,hc,P.BLK,1);
+  // Пиксельная стрелка влево от текста (→)
+  cx.fillStyle=hc;
+  cx.fillRect(ax,ay+1,7,2);       // хвост
+  cx.fillRect(ax+6,ay-1,2,6);     // наконечник вертикаль
+  cx.fillRect(ax+7,ay,1,4);       // кончик
+  cx.globalAlpha=1;
+}
+if(G.ship.craftQueue&&G.ship.craftQueue.length>0){const cq=G.ship.craftQueue[0];const pct=(cq.progress/cq.total*100)|0;cx.globalAlpha=.92;rc(2,fy+8,54,7,P.UIB);txt('КРАФТ',4,fy+9,P.UIT2,1);bar(25,fy+9,28,4,cq.progress/cq.total,P.YEL,P.DIM2,P.DIM);txs(pct+'%',56,fy+9,P.YEL,P.BLK,1);cx.globalAlpha=1;}}drwWorkerHUD(G);}
 function drwJoystick(){if(!USE_TOUCH_UI||!ALLOW_JOY)return;if(!TOUCH.joyActive){const bx=38,by=LH-38;cx.globalAlpha=.25;ring(bx,by,22,P.UIT2,1);ring(bx,by,8,P.UIT2,1);cx.globalAlpha=.4;txt('MOVE',bx-9,by+26,P.UIT2,1);cx.globalAlpha=1;}else{cx.globalAlpha=.5;disc(TOUCH.joyBaseX|0,TOUCH.joyBaseY|0,22,'#001122');ring(TOUCH.joyBaseX|0,TOUCH.joyBaseY|0,22,P.UIT,1);cx.globalAlpha=1;cx.globalAlpha=.85;disc(TOUCH.joyX|0,TOUCH.joyY|0,9,P.UIT);disc(TOUCH.joyX|0,TOUCH.joyY|0,6,P.UIT2);cx.globalAlpha=1;}}
 // ★ v16: Стилизованные иконки для ship/launch — рисуют корабль/ракету вместо буквы
 function drwShipIcon(cx_,cy_,col){
