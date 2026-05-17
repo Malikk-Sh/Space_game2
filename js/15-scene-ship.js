@@ -88,11 +88,12 @@ function updShip(G){
         G.shipReturnState=null;
         startTrans(()=>{G.state='space';TAP_FIRE=true;ALLOW_JOY=true;if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}});
       }else{
+        const savedPlanetState=G.shipReturnState; // 'planet_drosh' / 'planet_bubblika' etc.
         G.campaignState.targetPlanet=PLANETS[planetKey].nextPlanet;
         G.shipReturnState=null;
         const hadStarMap=!!(G.campaignState.inventory&&G.campaignState.inventory.starMap);
         G._visitTargetSet=false;
-        startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);if(hadStarMap){G.state='ship_view';G.shipUI='map';G.shipReturnState=null;G._navFromLaunch=false;G.shipT=0;TAP_FIRE=false;ALLOW_JOY=false;resetBtns();addBtn('back',20,24,10,'<',P.UIT);}});
+        startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);if(hadStarMap){G.state='ship_view';G.shipUI='map';G.shipReturnState=savedPlanetState;G._navFromLaunch=true;G.shipT=0;TAP_FIRE=false;ALLOW_JOY=false;resetBtns();addBtn('back',20,24,10,'<',P.UIT);}});
       }
       return;
     }

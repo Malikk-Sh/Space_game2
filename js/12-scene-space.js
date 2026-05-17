@@ -104,7 +104,7 @@ function _startBurst(G,p,w){
   shake(2);
 }
 
-function initSpace(G){saveCheckpoint(G,'space');TAP_FIRE=true;ALLOW_JOY=true;Object.assign(G,{state:'space',asts:[],buls:[],rits:[],enms:[],ebuls:[],pups:[],spaceAliens:[],sT:0,prog:0,appr:false,landT:0,astST:40,enmST:240,combo:0,comboT:0,transIn:60,landingTriggered:false,_minibossSpawned:false,_sniperAlive:false,_calmZoneCleared:false});Object.assign(G.pl,{x:50,y:LH/2,vx:0,vy:0,inv:0,boost:0,squash:0,drift:0,boostWas:false,wep:Math.min(2,G.pl.wep||1),burstQueue:0,burstNext:0,_beamDepleted:false});
+function initSpace(G){saveCheckpoint(G,'space');TAP_FIRE=true;ALLOW_JOY=true;Object.assign(G,{state:'space',asts:[],buls:[],rits:[],enms:[],ebuls:[],pups:[],spaceAliens:[],sT:0,prog:0,appr:false,landT:0,astST:40,enmST:240,combo:0,comboT:0,transIn:60,landingTriggered:false,_minibossSpawned:false,_sniperAlive:false});Object.assign(G.pl,{x:50,y:LH/2,vx:0,vy:0,inv:0,boost:0,squash:0,drift:0,boostWas:false,wep:Math.min(2,G.pl.wep||1),burstQueue:0,burstNext:0,_beamDepleted:false});
 // ★ Миграция: если wepIdx ещё не задан, выводим из legacy p.wep (1→0 L1, 2→3 L2)
 if(G.pl.wepIdx==null)G.pl.wepIdx=(G.pl.wep===2?3:0);
 // Сброс на L1, если выбран недоступный слот (после загрузки старого сейва)
@@ -247,8 +247,8 @@ function updSpace(G){
   sh.fuel=Math.max(0,sh.fuel-0.009*_fuelEff);
   // fuel<20: виньетка + иконка (визуальный сигнал), текстовые уведомления здесь отключены
   // fuel 20-30: текстовое предупреждение без виньетки
-  if(sh.fuel<20){if(sh.fuel<=0&&G.sT%360===0){G.notif='ТОПЛИВО ЗАКОНЧИЛОСЬ';G.notifT=70;G.notifCol=P.RED;}}
-  else if(sh.fuel<30&&G.sT%200===0){G.notif='ТОПЛИВО КОНЧАЕТСЯ... ОСТАЛОСЬ: '+Math.floor(sh.fuel)+'%';G.notifT=90;G.notifCol=P.ORA;}
+  if(sh.fuel<20){if(sh.fuel<=0&&G.sT%600===0){G.notif='ТОПЛИВО ЗАКОНЧИЛОСЬ';G.notifT=70;G.notifCol=P.RED;}}
+  else if(sh.fuel<30&&G.sT%500===0){G.notif='ТОПЛИВО КОНЧАЕТСЯ... ОСТАЛОСЬ: '+Math.floor(sh.fuel)+'%';G.notifT=90;G.notifCol=P.ORA;}
   // Power-room регенерирует энергию (1 рабочий = +0.18 EN/кадр); вдвое медленнее без топлива
   p.en=Math.min(p.men,p.en+.18*(sh.fuel<=0?0.5:1)*_sw.power);
   // Workshop workers passively repair ship hull (0.01 HP/frame per worker)
@@ -412,11 +412,8 @@ function updSpace(G){
     }
   }
 
-  // Зона затишья перед посадкой: при prog>0.9 очищаем врагов/астероиды и не спавним новых
-  if(G.prog>=0.9&&!G._calmZoneCleared){
-    G._calmZoneCleared=true;
-    G.asts.length=0;G.enms.length=0;G.ebuls.length=0;
-  }
+  // Зона затишья перед посадкой: при prog≥0.9 просто останавливаем спавн новых
+  // Существующие астероиды и враги доживают своё естественно
 
   // Спавн астероидов
   if(G.prog<0.9){
