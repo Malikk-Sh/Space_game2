@@ -52,22 +52,17 @@ function updShip(G){
   }
 
   if(KD.Tab||btnJust('back')){sfxUI();
-    if(G._navFromLaunch){
-      G._navFromLaunch=false;G.shipReturnState=null;
-      startTrans(()=>{G.state='space';TAP_FIRE=true;ALLOW_JOY=true;resetBtns();if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}});
-    }else{
-      startTrans(()=>{ALLOW_JOY=true;TAP_FIRE=false;G.state=G.shipReturnState||'planet_drosh';resetBtns();
-        if(G.state==='planet_drosh'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);}
-        else if(G.state==='planet_bubblika'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);addBtn('jump',LW-20,LH-48,12,'J',P.CYA);}
-        else if(G.state==='planet_krasnozem'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);}
-        else if(G.state==='space'){
-          TAP_FIRE=true;ALLOW_JOY=true;
-          if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}
-        }
-        else if(G.state==='finale_tina'){addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}
-        return;
-      });
-    }
+    startTrans(()=>{ALLOW_JOY=true;TAP_FIRE=false;G.state=G.shipReturnState||'planet_drosh';resetBtns();
+      if(G.state==='planet_drosh'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);}
+      else if(G.state==='planet_bubblika'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);addBtn('jump',LW-20,LH-48,12,'J',P.CYA);}
+      else if(G.state==='planet_krasnozem'){addBtn('int',LW-20,LH-20,12,'*',P.YEL);addBtn('ship',20,24,10,'S',P.UIT);}
+      else if(G.state==='space'){
+        TAP_FIRE=true;ALLOW_JOY=true;
+        if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}
+      }
+      else if(G.state==='finale_tina'){addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}
+      return;
+    });
   }
 
   // ★ v16 r4 (other-4): ВЗЛЁТ из интерфейса корабля по [L] / тач-кнопке
@@ -81,18 +76,10 @@ function updShip(G){
     if(canLaunchHere&&(KD.KeyL||(USE_TOUCH_UI&&btnJust('launch')))){
       sfxLand();
       if(!G.campaignState.planetsCompleted.includes(planetKey))G.campaignState.planetsCompleted.push(planetKey);
-      if(G._navFromLaunch){
-        G._navFromLaunch=false;
-        G.shipReturnState=null;
-        startTrans(()=>{G.state='space';TAP_FIRE=true;ALLOW_JOY=true;resetBtns();if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}});
-      }else{
-        const savedPlanetState=G.shipReturnState; // 'planet_drosh' / 'planet_bubblika' etc.
-        G.campaignState.targetPlanet=PLANETS[planetKey].nextPlanet;
-        G.shipReturnState=null;
-        const hadStarMap=!!(G.campaignState.inventory&&G.campaignState.inventory.starMap);
-        G._visitTargetSet=false;
-        startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);if(hadStarMap){G.state='ship_view';G.shipUI='map';G.shipReturnState=savedPlanetState;G._navFromLaunch=true;G.shipT=0;TAP_FIRE=false;ALLOW_JOY=false;resetBtns();addBtn('back',20,24,10,'<',P.UIT);}else{resetBtns();if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}}});
-      }
+      if(!G._visitTargetSet)G.campaignState.targetPlanet=PLANETS[planetKey].nextPlanet;
+      G._visitTargetSet=false;
+      G.shipReturnState=null;
+      startTrans(()=>{G.pl.hp=Math.min(G.pl.mhp,G.pl.hp+30);G.pl.en=G.pl.men;G.ship.fuel=Math.min(100,G.ship.fuel+40);initSpace(G);resetBtns();if(USE_TOUCH_UI){addBtn('boost',LW-20,36,14,'>>',P.TH2);addBtn('wcyc',LW-40,LH-22,11,'WP',P.L1);addBtn('ship',LW-20,LH-22,10,'S',P.UIT);}});
       return;
     }
   }
@@ -1514,9 +1501,9 @@ function drwShipWorkers(G){
 // Координаты планет на карте (статичные позиции для согласованности).
 //   centerX/centerY вычисляются от LW/LH в drwShipMap.
 const _MAP_PLANETS=[
-  {id:'drosh',     name:'ДРОШ',      angle:Math.PI*1.1, r:32, col:P.PL1,  body:P.IC3},
-  {id:'bubblika',  name:'БУББЛИКА',  angle:Math.PI*1.7, r:48, col:P.BUB1, body:P.BUB3},
-  {id:'krasnozem', name:'КРАСНОЗЁМ', angle:Math.PI*0.4, r:62, col:P.KRZ1, body:P.KRZ3},
+  {id:'drosh',     name:'ДРОШ',      angle:Math.PI*1.1, r:42, col:P.PL1,  body:P.IC3},
+  {id:'bubblika',  name:'БУББЛИКА',  angle:Math.PI*1.7, r:62, col:P.BUB1, body:P.BUB3},
+  {id:'krasnozem', name:'КРАСНОЗЁМ', angle:Math.PI*0.4, r:81, col:P.KRZ1, body:P.KRZ3},
   {id:'center',    name:'ТИНА',      angle:0,            r:0,  col:P.TINA, body:P.TINA_CORE},
 ];
 
@@ -1618,9 +1605,9 @@ function drwShipMap(G){
   const cx_=LW/2, cy_=LH/2+8;
   // Орбиты как тусклые кольца
   cx.globalAlpha=.15;
-  ring(cx_,cy_,32,P.PUR2,1);
-  ring(cx_,cy_,48,P.PUR2,1);
+  ring(cx_,cy_,42,P.PUR2,1);
   ring(cx_,cy_,62,P.PUR2,1);
+  ring(cx_,cy_,81,P.PUR2,1);
   cx.globalAlpha=1;
   // Маршрут (соединительные линии между планетами по порядку)
   cx.globalAlpha=.30;

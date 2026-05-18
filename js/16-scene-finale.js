@@ -1972,6 +1972,24 @@ function drwFinaleTina(G){
     }
   }
 
+  // Красный оверлей + мигающие предупреждения в первые 130 кадров экстра-режима
+  if(F.battleActive&&F.tina&&F.tina.emergencyProtocol&&F.tina.emergencyProtocol.t<130){
+    const eT=F.tina.emergencyProtocol.t;
+    const baseA=Math.min(0.45,eT/18);
+    const blink=0.5+0.5*Math.sin(eT*0.7);
+    cx.globalAlpha=baseA*blink;
+    cx.fillStyle='#cc0000';cx.fillRect(0,0,LW,LH);
+    cx.globalAlpha=1;
+    if(Math.floor(eT/7)%2===0){
+      const wA=Math.min(1,eT/12)*0.9;
+      cx.save();cx.font='bold 11px sans-serif';cx.globalAlpha=wA;
+      cx.fillStyle='#ffee00';cx.textAlign='center';cx.textBaseline='middle';
+      const wPos=[[LW/2,LH/2],[LW*.15,LH*.28],[LW*.85,LH*.28],[LW*.15,LH*.72],[LW*.85,LH*.72]];
+      for(const [wx,wy] of wPos)cx.fillText('⚠',wx,wy);
+      cx.restore();cx.globalAlpha=1;
+    }
+  }
+
   // === ТЕКСТ И HP-БАРЫ — РИСУЕМ БЕЗ SCALE ДЛЯ ЧЁТКОСТИ ===
   if(F.battleActive&&F.tina){
     const T=F.tina;
