@@ -1507,9 +1507,9 @@ function drwShipWorkers(G){
 // Координаты планет на карте (статичные позиции для согласованности).
 //   centerX/centerY вычисляются от LW/LH в drwShipMap.
 const _MAP_PLANETS=[
-  {id:'drosh',     name:'ДРОШ',      angle:Math.PI*1.1, r:42, col:P.PL1,  body:P.IC3},
-  {id:'bubblika',  name:'БУББЛИКА',  angle:Math.PI*1.7, r:62, col:P.BUB1, body:P.BUB3},
-  {id:'krasnozem', name:'КРАСНОЗЁМ', angle:Math.PI*0.4, r:81, col:P.KRZ1, body:P.KRZ3},
+  {id:'drosh',     name:'ДРОШ',      angle:Math.PI*1.1, r:32, col:P.PL1,  body:P.IC3},
+  {id:'bubblika',  name:'БУББЛИКА',  angle:Math.PI*1.7, r:48, col:P.BUB1, body:P.BUB3},
+  {id:'krasnozem', name:'КРАСНОЗЁМ', angle:Math.PI*0.4, r:62, col:P.KRZ1, body:P.KRZ3},
   {id:'center',    name:'ТИНА',      angle:0,            r:0,  col:P.TINA, body:P.TINA_CORE},
 ];
 
@@ -1614,9 +1614,9 @@ function drwShipMap(G){
   const cx_=LW/2, cy_=LH/2+8;
   // Орбиты как тусклые кольца
   cx.globalAlpha=.15;
-  ring(cx_,cy_,42,P.PUR2,1);
+  ring(cx_,cy_,32,P.PUR2,1);
+  ring(cx_,cy_,48,P.PUR2,1);
   ring(cx_,cy_,62,P.PUR2,1);
-  ring(cx_,cy_,81,P.PUR2,1);
   cx.globalAlpha=1;
   // Маршрут (соединительные линии между планетами по порядку)
   cx.globalAlpha=.30;
