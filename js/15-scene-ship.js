@@ -288,7 +288,7 @@ function drwShipView(G){
   // Полоса заголовка
   rc(0,0,LW,12,'#0a1828');rc(0,12,LW,1,'#1a3550');
   txs('SINTARA - ИНТЕРЬЕР КОРАБЛЯ',3,3,P.CYA,P.BLK,1);
-  txs(USE_TOUCH_UI?'[<] НАЗАД':'[TAB] НАЗАД',LW-58,3,P.UIT2,P.BLK,1);
+  txs(USE_TOUCH_UI?'[<] НАЗАД':'[TAB] НАЗАД',PAUSE_ICON_X-gw('[TAB] НАЗАД')-3,3,P.UIT2,P.BLK,1);
 
   const inv=G.campaignState.inventory;
   const FEED_COST=2,FEED_FUEL=22;
@@ -761,7 +761,7 @@ function drwShipFuelScene(G,x,y,w,h,t){
   // Цифры процентов
   const pct=Math.round(G.ship.fuel)+'%';
   const pw=gw(pct);
-  txs(pct,tankX+(tankW-pw)/2|0,tankY+tankH/2|0-2,'#ddffaa',P.BLK,1);
+  txs(pct,tankX+((tankW-pw)/2|0),(tankY+tankH/2|0)-2,'#ddffaa',P.BLK,1);
 }
 
 function drwShipWorkshopScene(G,x,y,w,h,t,inv){
@@ -1303,14 +1303,18 @@ function drwShipWorkshop(G){
   rc(12,1,42,13,'#1a4a2a');rc(12,13,42,1,P.GRN);
   txs('< НАЗАД',16,5,P.GRN,P.BLK,1);
   txcs('МАСТЕРСКАЯ',5,P.GRN,P.BLK,1);
-  // Ресурсы справа — КР / РЕС / МАТ в одной строке
+  // Ресурсы справа — КР / РЕС / МАТ в одной строке (с отступом под иконку паузы)
   const crTxt='КР:'+G.pl.cr;
   const resTxt='РЕС:'+G.pl.res;
   const matTxt='МАТ:'+(G.campaignState.materials||0);
-  const _rw=gw(crTxt)+gw(resTxt)+gw(matTxt)+10;
-  txs(crTxt,LW-_rw,5,P.YEL,P.BLK,1);
-  txs(resTxt,LW-_rw+gw(crTxt)+4,5,P.RES,P.BLK,1);
-  txs(matTxt,LW-gw(matTxt)-3,5,P.CYA,P.BLK,1);
+  const _rRight=PAUSE_ICON_X-3;
+  const _rGap=4;
+  const matX=_rRight-gw(matTxt);
+  const resX=matX-_rGap-gw(resTxt);
+  const crX=resX-_rGap-gw(crTxt);
+  txs(crTxt,crX,5,P.YEL,P.BLK,1);
+  txs(resTxt,resX,5,P.RES,P.BLK,1);
+  txs(matTxt,matX,5,P.CYA,P.BLK,1);
 
   // ===== ОЧЕРЕДЬ (компактная однострочная полоса) =====
   let py=20;
@@ -1441,9 +1445,9 @@ function drwShipWorkers(G){
   rc(20,1,42,13,'#0a2a4a');rc(20,13,42,1,P.EN);
   txs('< НАЗАД',24,5,P.EN,P.BLK,1);
   txcs('РАСПРЕДЕЛЕНИЕ РАБОЧИХ',5,P.EN,P.BLK,1);
-  txs('ВСЕГО: '+G.pl.workers,LW-gw('ВСЕГО: '+G.pl.workers)-3,2,P.WHT,P.BLK,1);
+  txs('ВСЕГО: '+G.pl.workers,PAUSE_ICON_X-gw('ВСЕГО: '+G.pl.workers)-3,2,P.WHT,P.BLK,1);
   const _free=G.pl.freeWorkers||0;
-  txs('СВОБ: '+_free,LW-gw('СВОБ: '+_free)-3,9,_free>0?'#ffcc00':'#555555',P.BLK,1);
+  txs('СВОБ: '+_free,PAUSE_ICON_X-gw('СВОБ: '+_free)-3,9,_free>0?'#ffcc00':'#555555',P.BLK,1);
 
   // ===== КАРТОЧКИ ОТСЕКОВ =====
   G._shipSubHits=[];
@@ -1608,7 +1612,7 @@ function drwShipMap(G){
   txcs('СИСТЕМНАЯ КАРТА',5,P.PUR,P.BLK,1);
   const dest=(PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh).name;
   const destTxt='ЦЕЛЬ: '+dest;
-  txs(destTxt,LW-gw(destTxt)-3,5,P.CYA,P.BLK,1);
+  txs(destTxt,PAUSE_ICON_X-gw(destTxt)-3,5,P.CYA,P.BLK,1);
 
   // ===== ЦЕНТР КАРТЫ =====
   const cx_=LW/2, cy_=LH/2+8;

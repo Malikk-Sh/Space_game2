@@ -1188,7 +1188,7 @@ function updTitle(G){
     // Touch / mouse main menu
     if(mC){
       initAC();
-      // Клик по "V0.7" → открыть DEV меню
+      // Клик по "V0.9" → открыть DEV меню
       if(mX>=2&&mX<=26&&mY>=LH-12&&mY<=LH-1){T.inDev=true;T.devSel=0;sfxUI();mC=false;}
       else if(G._titleHits){
         for(const h of G._titleHits){
@@ -1444,7 +1444,7 @@ function drwTitle(G){
     }
     // Версия (клик открывает DEV меню)
     const vCol=(_DEV.immortal||_DEV.speedMult>1||_DEV.dmgMult>1)?'#ffaa00':P.S3;
-    txt('V0.7',2,LH-7,vCol,1);
+    txt('V0.9',2,LH-7,vCol,1);
     if(_DEV.immortal||_DEV.speedMult>1||_DEV.dmgMult>1){
       cx.globalAlpha=.7+.3*Math.sin(t*.15);
       rc(23,LH-7,2,2,'#ffaa00');

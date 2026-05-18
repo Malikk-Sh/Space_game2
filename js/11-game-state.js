@@ -152,7 +152,7 @@ function drwPauseOverlay(G){
   // ★ Phase 5.3: счётчик ачивок в нижнем левом углу
   if(typeof countAchievements==='function'){
     const n=countAchievements(G);
-    txs('★ '+n+'/15',px+4,py+ph-19,P.YEL,P.BLK,1);
+    txs('* '+n+'/15',px+4,py+ph-19,P.YEL,P.BLK,1);
   }
 }
 
