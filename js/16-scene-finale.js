@@ -15,12 +15,28 @@ function updTinaBattle(G){
     T.phaseTransition.t++;
     G.buls=[];G.ebuls=[]; // никто не стреляет во время катсцены
     const pT=T.phaseTransition;
+    const isRage=pT.toPhase===4;
+    const flashCol=isRage?'#ffaa00':pT.toPhase===2?P.RED:P.YEL;
     // Усиливающийся импульс под конец
     if(pT.t===Math.floor(pT.duration*0.5)){
       // На середине катсцены — большой взрыв
-      addShockwave(T.x,T.y,TINA_R,pT.toPhase===2?P.RED:P.YEL,30);
-      flash(.6,pT.toPhase===2?P.RED:P.YEL);shake(8);
-      spPts(T.x,T.y,50,[pT.toPhase===2?P.RED:P.YEL,P.WHT,P.ORA],1,5,40,.025,2.5);
+      addShockwave(T.x,T.y,TINA_R,flashCol,isRage?44:30);
+      flash(isRage?.85:.6,flashCol);shake(isRage?14:8);
+      spPts(T.x,T.y,isRage?80:50,[flashCol,P.WHT,P.ORA],1,isRage?6.5:5,isRage?55:40,.025,2.5);
+      if(isRage)sfxBoss();
+    }
+    // Режим ярости: дополнительные толчки и вспышки на 25%, 75% и финал — переход эпичнее
+    if(isRage){
+      if(pT.t===Math.floor(pT.duration*0.25)){shake(6);flash(.3,P.RED);addShockwave(T.x,T.y,TINA_R*0.7,P.RED,22);}
+      if(pT.t===Math.floor(pT.duration*0.75)){shake(8);flash(.4,'#ffaa00');addShockwave(T.x,T.y,TINA_R*1.1,'#ffaa00',26);}
+      // Постоянная мелкая тряска экрана нарастает к пику
+      if(pT.t%4===0){const prog=pT.t/pT.duration;shake(1+prog*3);}
+      // Дополнительные искры с тела Тины
+      if(pT.t%3===0){
+        const a=Math.random()*Math.PI*2;
+        const sr=TINA_R*0.9;
+        PTS.push({x:T.x+Math.cos(a)*sr,y:T.y+Math.sin(a)*sr,vx:Math.cos(a)*(1+Math.random()*1.5),vy:Math.sin(a)*(1+Math.random()*1.5),lf:30,ml:36,col:Math.random()<.5?'#ffaa00':P.RED,sz:1,gv:0,fade:0.5});
+      }
     }
     // Орбитирующие частицы вокруг Тины во время катсцены
     if(pT.t%2===0){
@@ -29,7 +45,7 @@ function updTinaBattle(G){
       PTS.push({
         x:T.x+Math.cos(a)*r,y:T.y+Math.sin(a)*r,
         vx:-Math.cos(a)*1.2,vy:-Math.sin(a)*1.2,
-        lf:25,ml:30,col:pT.toPhase===2?P.RED:P.YEL,sz:1,gv:0,fade:0.5
+        lf:25,ml:30,col:flashCol,sz:1,gv:0,fade:0.5
       });
     }
     // По завершении катсцены — переключаем фазу и запускаем брифинг пришельца
@@ -61,7 +77,14 @@ function updTinaBattle(G){
         // ★ Чекпоинт: 3→4
         saveCheckpoint(G,'finale_phase_4');
       }
-      shake(10);flash(.5,pT.toPhase===4?'#ffaa00':pT.toPhase===2?P.RED:P.YEL);sfxBoss();
+      const rageEnter=pT.toPhase===4;
+      shake(rageEnter?18:10);flash(rageEnter?.8:.5,rageEnter?'#ffaa00':pT.toPhase===2?P.RED:P.YEL);sfxBoss();
+      if(rageEnter){
+        addShockwave(T.x,T.y,TINA_R*1.5,'#ffaa00',50);
+        addShockwave(T.x,T.y,TINA_R*0.9,P.RED,35);
+        spPts(T.x,T.y,90,['#ffaa00',P.RED,P.WHT,P.YEL],1.3,7,55,.025,3);
+        sfxX(2);
+      }
       T.phaseTransition=null;
     }
     return;
@@ -2018,54 +2041,26 @@ function drwFinaleTina(G){
     }
   }
 
-  // ★ v22: Стрелка к звезде — скрывается СРАЗУ при движении вправо, появляется при остановке
+  // Стрелка к звезде в стиле Дроша: жёлтый треугольник у корабля, указывает на цель
   if(F.battleActive&&F.tina&&F.tina.emergencyProtocol&&F.tina.emergencyProtocol.starWaiting){
     const eP=F.tina.emergencyProtocol;
-    // Только скорость вправо управляет видимостью
-    const showArrow=G.pl.vx<=0.1;
-    if(showArrow){
-      const t=eP.starWaitT;
-      const arrowY=(LH/2)|0;
-      const blink=0.6+0.4*Math.sin(t*0.13);
-      // Скользящая анимация: шевроны «текут» вправо
-      const slide=((Math.sin(t*0.09)+1)*0.5*4)|0; // 0..4px
-      // — Панель (тёмный синеватый фон) —
-      cx.globalAlpha=0.78;
-      rc(LW-42,arrowY-25,42,50,'#020c1a');
+    const Tn=F.tina;
+    const dx=Tn.x-G.pl.x, dy=Tn.y-G.pl.y;
+    const dist=Math.hypot(dx,dy);
+    if(dist>40){
+      const ang=Math.atan2(dy,dx);
+      const r=18+3*Math.sin(eP.starWaitT*.2);
+      const ax=G.pl.x+Math.cos(ang)*r;
+      const ay=G.pl.y+Math.sin(ang)*r;
+      cx.globalAlpha=.85;
+      const ca=Math.cos(ang),sa=Math.sin(ang);
+      const _tri=(dxp,dyp)=>{const x=ax+dxp*ca-dyp*sa,y=ay+dxp*sa+dyp*ca;cx.fillRect(x|0,y|0,1,1);};
+      cx.fillStyle=P.YEL;
+      for(let i=0;i<5;i++){_tri(i,0);_tri(i-1,1);_tri(i-1,-1);}
+      _tri(4,0);_tri(3,1);_tri(3,-1);_tri(2,2);_tri(2,-2);
       cx.globalAlpha=1;
-      // Светящийся левый бордер (cyan glow)
-      cx.globalAlpha=blink;
-      cx.fillStyle=P.L1;   // #18ffee
-      cx.fillRect(LW-42,arrowY-25,1,50);
-      // Верхний и нижний бордер (приглушённее)
-      cx.fillStyle='#0a3a4a';
-      cx.fillRect(LW-41,arrowY-25,41,1);
-      cx.fillRect(LW-41,arrowY+24,41,1);
-      cx.globalAlpha=1;
-      // — Три шеврона «>>>» с волновой прозрачностью —
-      // ci=0 дальний (тусклый), ci=2 ближний к краю (яркий)
-      for(let ci=0;ci<3;ci++){
-        const wave=(Math.sin(t*0.07-ci*0.7)+1)*0.5; // 0..1
-        const alpha=blink*(0.18+0.28*ci+0.22*wave);
-        const bx=(LW-36+ci*9+slide)|0;
-        const by=arrowY;
-        cx.globalAlpha=Math.min(1,alpha);
-        // Тень шеврона (1px смещение)
-        cx.fillStyle='#001c2c';
-        for(let r=0;r<5;r++){cx.fillRect(bx+r+1,by-4+r+1,1,9-2*r);}
-        // Основной шеврон
-        cx.fillStyle=ci===2?P.L1L:P.L1; // #a8fff4 или #18ffee
-        for(let r=0;r<5;r++){cx.fillRect(bx+r,by-4+r,1,9-2*r);}
-        // Блик (1px ярче на первом столбце)
-        if(ci===2){cx.fillStyle='#ffffff';cx.globalAlpha=alpha*0.35;cx.fillRect(bx,by-4,1,9);}
-        cx.globalAlpha=1;
-      }
-      // — Подпись «ТУДА» под шевронами —
-      cx.globalAlpha=blink*0.75;
-      txs('ТУДА',(LW-28)|0,(arrowY+17)|0,P.L1,'#001422',1);
-      cx.globalAlpha=1;
-      // Звуковой хинт после долгого простоя (каждые 1.5 сек)
-      if(eP.starWaitT>120&&t%90===0)bip(660,.18,.15,'sine',880,440);
+      // Звуковой хинт только если игрок стоит/едва движется — иначе спам каждые 1.5с
+      if(eP.starWaitT>120&&eP.starWaitT%90===0&&Math.hypot(G.pl.vx,G.pl.vy)<0.3)bip(660,.18,.15,'sine',880,440);
     }
   }
 
