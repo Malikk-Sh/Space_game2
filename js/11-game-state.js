@@ -76,6 +76,7 @@ function reallocWorkers(G,room,delta){
   }
   if(w[room]<=0)return false;
   const recipient=room==='power'?'fuel':'power';
+  if(w[recipient]>=5)return false;
   w[room]--;w[recipient]++;
   return true;
 }
