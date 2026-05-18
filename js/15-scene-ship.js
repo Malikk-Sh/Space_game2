@@ -1649,7 +1649,8 @@ function drwShipMap(G){
     const py=(cy_+Math.sin(p.angle)*p.r)|0;
     const unlocked=_mapIsUnlocked(G,p.id);
     const isCurrent=(curPlanet===p.id);
-    const isHighlighted=G._visitTargetSet?(targetPlanet===p.id&&!isCurrent):isCurrent;
+    const isTarget=(targetPlanet===p.id);
+    const isHighlighted=G._visitTargetSet?(isTarget&&!isCurrent):isCurrent;
     const sz=p.id==='center'?6:5;
     // Тень
     cx.fillStyle='rgba(0,0,0,0.5)';cx.fillRect(px-sz,py+sz,sz*2,1);
