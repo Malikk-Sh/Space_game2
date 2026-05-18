@@ -238,7 +238,6 @@ function updSpace(G){
   G.sT++;
   if(G.notifT>0)G.notifT--;
   const sh=G.ship;
-  const noFuelBoost=sh.fuel<=0?4.0:1.0;
   // Топливо теперь отвечает за маршевый ход и ускорение. При нуле остаётся аварийная тяга.
   // ★ Phase 2.4: эффекты распределения рабочих
   ensureShipWorkers(G);
@@ -435,7 +434,7 @@ function updSpace(G){
   // Обновление астероидов
   for(let i=G.asts.length-1;i>=0;i--){
     const a=G.asts[i];
-    a.x-=a.sp*noFuelBoost;a.rot+=.5;a.flash*=.8;
+    a.x-=a.sp;a.rot+=.5;a.flash*=.8;
     if(a.x<-20){G.asts.splice(i,1);continue;}
     if(p.inv<=0&&Math.abs(p.x-a.x)<a.s+7&&Math.abs(p.y-a.y)<a.s+6){
       if(p.shield>0){
@@ -590,7 +589,7 @@ function updSpace(G){
     // === AI движения и стрельбы ===
     if(_t==='pirate'){
       e.vy=Math.sin(e.t*.05)*.7;
-      e.x+=e.vx*noFuelBoost;e.y+=e.vy*noFuelBoost;
+      e.x+=e.vx;e.y+=e.vy;
       e.shootCD--;
       if(e.shootCD<=0&&e.x<LW-10&&e.x>40){
         G.ebuls.push({x:e.x-5,y:e.y,vx:-2.4,vy:(p.y-e.y)*.015});
@@ -599,7 +598,7 @@ function updSpace(G){
       }
     } else if(_t==='tank'){
       e.vy=Math.sin(e.t*.03)*.3;
-      e.x+=e.vx*noFuelBoost;e.y+=e.vy*noFuelBoost;
+      e.x+=e.vx;e.y+=e.vy;
       e.shootCD--;
       if(e.shootCD<=0&&e.x<LW-10&&e.x>20){
         G.ebuls.push({x:e.x-9,y:e.y,vx:-1.6,vy:(p.y-e.y)*.012,kind:'bigshell',dmg:8});
@@ -611,7 +610,7 @@ function updSpace(G){
       const dx=p.x-e.x,dy=p.y-e.y,d=Math.hypot(dx,dy)||1;
       e.vx=-1.2+dx/d*0.3;
       e.vy=dy/d*1.0;
-      e.x+=e.vx*noFuelBoost;e.y+=e.vy*noFuelBoost;
+      e.x+=e.vx;e.y+=e.vy;
       // Хвост частиц
       if(e.t%4===0)PTS.push({x:e.x+3,y:e.y,vx:1.5,vy:(Math.random()-.5)*.2,lf:8,ml:12,col:P.L1L,sz:1,gv:0,fade:.6});
     } else if(_t==='sniper'){
@@ -642,7 +641,7 @@ function updSpace(G){
     } else if(_t==='miniboss'){
       if(e.phase==='shoot'){
         e.vy=Math.sin(e.t*.04)*.5;
-        e.x+=e.vx*noFuelBoost;e.y+=e.vy*noFuelBoost;
+        e.x+=e.vx;e.y+=e.vy;
         e.shootCD--;
         if(e.shootCD<=0&&e.x<LW-15){
           // Веер из 3 крупных снарядов
@@ -663,7 +662,7 @@ function updSpace(G){
         const dx=p.x-e.x,dy=p.y-e.y,d=Math.hypot(dx,dy)||1;
         e.vx=-1.5+dx/d*0.5;
         e.vy=dy/d*0.8;
-        e.x+=e.vx*noFuelBoost;e.y+=e.vy*noFuelBoost;
+        e.x+=e.vx;e.y+=e.vy;
       }
     }
 
@@ -730,7 +729,7 @@ function updSpace(G){
   // Обновление ресурсов
   for(let i=G.rits.length-1;i>=0;i--){
     const r=G.rits[i];
-    r.x+=r.vx*noFuelBoost;r.y+=r.vy*noFuelBoost;r.vy*=.98;r.lf--;r.t++;
+    r.x+=r.vx;r.y+=r.vy;r.vy*=.98;r.lf--;r.t++;
     const dx=p.x-r.x,dy=p.y-r.y,d=Math.hypot(dx,dy);
     if(d<56){r.vx+=dx/d*1.5;r.vy+=dy/d*1.5;}
     if(d<10){
@@ -753,7 +752,7 @@ function updSpace(G){
   // Обновление пауэрапов — двигаются также как ресурсы (постоянная скорость влево)
   for(let i=G.pups.length-1;i>=0;i--){
     const pu=G.pups[i];
-    pu.x+=pu.vx*noFuelBoost;pu.y+=pu.vy*noFuelBoost;pu.vy*=.98;pu.t++;pu.lf--;
+    pu.x+=pu.vx;pu.y+=pu.vy;pu.vy*=.98;pu.t++;pu.lf--;
     const dx=p.x-pu.x,dy=p.y-pu.y,d=Math.hypot(dx,dy);
     if(d<80){pu.vx+=dx/d*3.5;pu.vy+=dy/d*3.5;}
     if(d<10){

@@ -986,22 +986,22 @@ function updFinaleCamera(G){
         // ★ v24b: За 1 сек до взрыва — плавный дрейф камеры на Тину
         const preT=easeInOutQuad(Math.min(1,(eT-1680)/60));
         tZ=0.48+(0.55-0.48)*preT;
-        tX=(T.x+p.x)/2+((T.x)-((T.x+p.x)/2))*preT;
-        tY=(T.y+p.y)/2+((T.y)-((T.y+p.y)/2))*preT;
+        const _baseX=T.x*0.575+p.x*0.425;
+        tX=_baseX+(T.x-_baseX)*preT;
+        const _baseY=T.y*0.575+p.y*0.425;
+        tY=_baseY+(T.y-_baseY)*preT;
         easeProgress=false;
       }else if(eT>=540){
-        // ★ v24b: Обратный отсчёт → взрыв — камера охватывает Тину И игрока
+        // Сбой пушек — зум-аут, смещение -15% в сторону игрока (task 5)
         tZ=0.48;
-        tX=(T.x+p.x)/2;
-        tY=(T.y+p.y)/2;
+        tX=T.x*0.575+p.x*0.425;
+        tY=T.y*0.575+p.y*0.425;
         easeProgress=false;
       }else{
-        // ★ v24b: Фаза появления пушек — акцент только на Тине, игрок за кадром.
-        // zoom=0.48: видимая ширина LW/0.48≈667px, левый край = T.x-333.
-        // Стена с eT=60 держит игрока на T.x-360 — вне кадра.
-        tZ=0.48;
-        tX=T.x;
-        tY=T.y;
+        // Обратный отсчёт — зум на корабль и пушки Тины (task 6)
+        tZ=0.65;
+        tX=T.x*0.5+p.x*0.5;
+        tY=T.y*0.5+p.y*0.5;
         easeProgress=false;
       }
     }else{
@@ -1972,17 +1972,17 @@ function drwFinaleTina(G){
     }
   }
 
-  // Красный оверлей + мигающие предупреждения в первые 130 кадров экстра-режима
-  if(F.battleActive&&F.tina&&F.tina.emergencyProtocol&&F.tina.emergencyProtocol.t<130){
+  // Красный оверлей + мигающие предупреждения в первые 350 кадров экстра-режима
+  if(F.battleActive&&F.tina&&F.tina.emergencyProtocol&&F.tina.emergencyProtocol.t<350){
     const eT=F.tina.emergencyProtocol.t;
     const baseA=Math.min(0.45,eT/18);
-    const blink=0.5+0.5*Math.sin(eT*0.7);
+    const blink=0.5+0.5*Math.sin(eT*Math.PI*2/100); // плавное 100-кадровое мигание
     cx.globalAlpha=baseA*blink;
     cx.fillStyle='#cc0000';cx.fillRect(0,0,LW,LH);
     cx.globalAlpha=1;
-    if(Math.floor(eT/7)%2===0){
-      const wA=Math.min(1,eT/12)*0.9;
-      cx.save();cx.font='bold 11px sans-serif';cx.globalAlpha=wA;
+    const wA=Math.min(1,eT/15)*0.9*(0.5+0.5*Math.sin(eT*Math.PI*2/100+Math.PI/2));
+    if(wA>0.05){
+      cx.save();cx.font='bold 22px sans-serif';cx.globalAlpha=wA;
       cx.fillStyle='#ffee00';cx.textAlign='center';cx.textBaseline='middle';
       const wPos=[[LW/2,LH/2],[LW*.15,LH*.28],[LW*.85,LH*.28],[LW*.15,LH*.72],[LW*.85,LH*.72]];
       for(const [wx,wy] of wPos)cx.fillText('⚠',wx,wy);

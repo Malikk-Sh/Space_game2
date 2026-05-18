@@ -1227,7 +1227,14 @@ function _executeDevAction(G,idx){
     case 4: devTeleport(G,'bubblika'); break;
     case 5: devTeleport(G,'krasnozem'); break;
     case 6: devTeleport(G,'tina'); break;
-    case 7: G.title.inDev=false; sfxUI(); break;
+    case 7: {
+      const inv=G.campaignState.inventory;
+      inv.spreadUnlocked=true;inv.missileUnlocked=true;inv.beamUnlocked=true;inv.burstUnlocked=true;
+      inv.laserBlueprint=true;inv.laserStrong=true;inv.shieldBlueprint=true;inv.shieldBuilt=true;
+      G.pl.en=9999;G.pl.men=9999;
+      sfxUI2();break;
+    }
+    case 8: G.title.inDev=false; sfxUI(); break;
   }
 }
 function devTeleport(G,dest){
@@ -1484,7 +1491,7 @@ function drwTitle(G){
   // === DEV МЕНЮ OVERLAY ===
   if(T.inDev){
     G._devHits=[];
-    const pw=176,ph=138,px=(LW-pw)/2|0,py=(LH-ph)/2|0;
+    const pw=176,ph=150,px=(LW-pw)/2|0,py=(LH-ph)/2|0;
     cx.globalAlpha=.93;rc(0,0,LW,LH,P.BLK);cx.globalAlpha=1;
     rc(px-2,py-2,pw+4,ph+4,'#554400');
     rc(px-1,py-1,pw+2,ph+2,'#332800');
@@ -1501,10 +1508,11 @@ function drwTitle(G){
       {label:'БУББЛИКА',type:'tp'},
       {label:'КРАСНОЗЁМ',type:'tp'},
       {label:'БОЙ С ТИНОЙ',type:'tp'},
+      {label:'ВСЕ ОРУЖИЯ + ∞ ЭН',type:'arsenal'},
       {label:'ЗАКРЫТЬ',type:'close'},
     ];
-    // selectable items: 0,1,2 = indices 0,1,2; then 3=null; then 3,4,5,6,7 = indices 4,5,6,7,8
-    const SEL_MAP=[0,1,2,4,5,6,7,8];
+    // selectable items: 0,1,2 = indices 0,1,2; then 3=null; then 3,4,5,6,7,8 = indices 4,5,6,7,8,9
+    const SEL_MAP=[0,1,2,4,5,6,7,8,9];
     let ry=py+20;
     for(let i=0;i<DEV_ROWS.length;i++){
       const row=DEV_ROWS[i];
