@@ -74,6 +74,10 @@ function updShip(G){
     else if(ret==='planet_bubblika'&&G.bubblikaDone){canLaunchHere=true;planetKey='bubblika';}
     else if(ret==='planet_krasnozem'&&G.krasDone){canLaunchHere=true;planetKey='krasnozem';}
     if(canLaunchHere&&(KD.KeyL||(USE_TOUCH_UI&&btnJust('launch')))){
+      const _hasStarMap=!!(G.campaignState.inventory&&G.campaignState.inventory.starMap);
+      if(_hasStarMap&&!G._visitTargetSet){
+        G.notif='ВЫБЕРИ ПЛАНЕТУ В КАРТЕ НАВИГАЦИИ!';G.notifT=140;G.notifCol=P.ORA;sfxHit();return;
+      }
       sfxLand();
       if(!G.campaignState.planetsCompleted.includes(planetKey))G.campaignState.planetsCompleted.push(planetKey);
       if(!G._visitTargetSet)G.campaignState.targetPlanet=PLANETS[planetKey].nextPlanet;
@@ -333,8 +337,8 @@ function drwShipView(G){
   const rooms=[
     // ★ PR C: чистые подсказки без аббревиатур. Воркеры теперь на отдельном экране (клик по Power открывает его).
     {col:0,row:0,id:'power',name:'ЭЛЕКТРОСТАНЦИЯ',col2:P.EN,
-     hint:'РАБОЧИЕ: '+G.pl.workers+'   ОТКРЫТЬ →',
-     status:'info',
+     hint:(G.pl.freeWorkers>0?'! СВОБ: '+G.pl.freeWorkers+'   ОТКРЫТЬ →':'ОТКРЫТЬ →'),
+     status:(G.pl.freeWorkers>0?'ready':'info'),
      action:(G)=>{G.shipUI='workers';sfxUI2();},
      notif:'РАСПРЕДЕЛЕНИЕ РАБОЧИХ ПО ОТСЕКАМ КОРАБЛЯ.'},
     {col:1,row:0,id:'fuel',name:'ТОПЛИВО',col2:P.RES,
@@ -359,11 +363,10 @@ function drwShipView(G){
      action:(G)=>{G.shipUI='workshop';sfxUI2();},
      notif:'СОЗДАНИЕ И ОЧЕРЕДЬ КРАФТА. ПРОГРЕСС ИДЁТ В ПОЛЁТЕ.'},
     {col:1,row:1,id:'bridge',name:'МОСТИК',col2:P.UIT,
-     // ★ PR C / PR E: курс + клик открывает системную карту (если Клирр выдал)
      hint:inv.starMap
-       ? 'КУРС: '+((PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh).name)+'   КАРТА →'
+       ? (G._visitTargetSet?'КУРС: '+((PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh).name)+'   КАРТА →':'! НЕ ВЫБРАНО   КАРТА →')
        : 'КУРС: '+((PLANETS[G.campaignState.targetPlanet]||PLANETS.drosh).name),
-     status:inv.starMap?'ready':'info',
+     status:inv.starMap?(G._visitTargetSet?'ready':'need'):'info',
      action:inv.starMap?(G)=>{G.shipUI='map';sfxUI2();}:null,
      notif:inv.starMap?'СИСТЕМНАЯ КАРТА — ВЫБОР МАРШРУТА.':'НАВИГАЦИЯ И КУРС КОРАБЛЯ.'},
   ];
@@ -502,6 +505,8 @@ function drwShipView(G){
   txs('РЕСУРСЫ: '+G.pl.res,panelX+3,py,P.RES,P.BLK,1);py+=7;
   ensureShipWorkers(G);
   txs('РАБОЧИЕ: '+G.pl.workers,panelX+3,py,P.EN,P.BLK,1);py+=7;
+  const _fw=G.pl.freeWorkers||0;
+  if(_fw>0){txs('! СВОБ: '+_fw,panelX+3,py,'#ffcc00',P.BLK,1);py+=7;}
   const _statMat=G.campaignState.materials||0;
   if(_statMat>0){txs('МАТЕРИАЛЫ: '+_statMat,panelX+3,py,P.CYA,P.BLK,1);py+=7;}
   // Очередь крафта — только индикатор «идёт работа», детали на экране мастерской
@@ -1436,7 +1441,9 @@ function drwShipWorkers(G){
   rc(20,1,42,13,'#0a2a4a');rc(20,13,42,1,P.EN);
   txs('< НАЗАД',24,5,P.EN,P.BLK,1);
   txcs('РАСПРЕДЕЛЕНИЕ РАБОЧИХ',5,P.EN,P.BLK,1);
-  txs('ВСЕГО: '+G.pl.workers,LW-gw('ВСЕГО: '+G.pl.workers)-3,5,P.WHT,P.BLK,1);
+  txs('ВСЕГО: '+G.pl.workers,LW-gw('ВСЕГО: '+G.pl.workers)-3,2,P.WHT,P.BLK,1);
+  const _free=G.pl.freeWorkers||0;
+  txs('СВОБ: '+_free,LW-gw('СВОБ: '+_free)-3,9,_free>0?'#ffcc00':'#555555',P.BLK,1);
 
   // ===== КАРТОЧКИ ОТСЕКОВ =====
   G._shipSubHits=[];
@@ -1477,17 +1484,16 @@ function drwShipWorkers(G){
     const cntTxt=String(w[rm.id]);
     txs(cntTxt,cntX+(bw-gw(cntTxt))/2,cntY+(bh-5)/2-1,P.WHT,P.BLK,1);
     // [+]
-    const sum=w.power+w.fuel+w.bridge+w.workshop;
-    const plusEnabled=sum<G.pl.workers||true; // realloc может всегда забрать из другого
-    rc(plusX,my,bw,bh,'#1a3a1a');
-    rc(plusX+1,my+1,bw-2,bh-2,'#2a5a2a');
-    txs('+',plusX+(bw-gw('+'))/2,my+(bh-5)/2-1,P.GRN,1);
+    const plusEnabled=(G.pl.freeWorkers||0)>0&&w[rm.id]<5;
+    rc(plusX,my,bw,bh,plusEnabled?'#1a3a1a':'#101a10');
+    rc(plusX+1,my+1,bw-2,bh-2,plusEnabled?'#2a5a2a':'#1a251a');
+    txs('+',plusX+(bw-gw('+'))/2,my+(bh-5)/2-1,plusEnabled?P.GRN:'#3a5a3a',1);
     G._shipSubHits.push({x:plusX,y:my,w:bw,h:bh,workerAction:'plus',workerRoom:rm.id});
     py+=cardH+cardMargin;
   }
   // ===== ИТОГ =====
   py+=2;
-  txcs('+/- ПЕРЕНОСИТ РАБОЧЕГО МЕЖДУ ОТСЕКАМИ',py,P.UIT2,P.BLK,1);
+  txcs('+ НАЗНАЧИТЬ (из своб.)     - ОСВОБОДИТЬ',py,P.UIT2,P.BLK,1);
   drwTutorial(G);
   drawTrans();
 }
@@ -1640,7 +1646,7 @@ function drwShipMap(G){
     const py=(cy_+Math.sin(p.angle)*p.r)|0;
     const unlocked=_mapIsUnlocked(G,p.id);
     const isCurrent=(curPlanet===p.id);
-    const isTarget=(targetPlanet===p.id);
+    const isHighlighted=G._visitTargetSet?(targetPlanet===p.id&&!isCurrent):isCurrent;
     const sz=p.id==='center'?6:5;
     // Тень
     cx.fillStyle='rgba(0,0,0,0.5)';cx.fillRect(px-sz,py+sz,sz*2,1);
@@ -1660,11 +1666,10 @@ function drwShipMap(G){
       ring(px,py,sz+3,P.WHT,1);
       cx.globalAlpha=1;
     }
-    if(isTarget&&!isCurrent){
-      // Целевая планета — жёлтый пульсирующий маркёр
+    if(isHighlighted){
       cx.globalAlpha=.6+.4*Math.sin(t*.2);
       ring(px,py,sz+4,P.YEL,1);
-      ring(px,py,sz+6,P.YEL,1);
+      if(G._visitTargetSet)ring(px,py,sz+6,P.YEL,1);
       cx.globalAlpha=1;
     }
     // Подпись (выше или ниже планеты, чтобы не пересекалось)

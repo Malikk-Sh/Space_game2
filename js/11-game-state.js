@@ -35,49 +35,31 @@ function newGame(){return{state:'menu',menuT:0,menuSt:[],pl:{x:50,y:LH/2,vx:0,vy
 function ensureShipWorkers(G){
   if(!G.ship)return;
   if(!G.ship.workers){
-    G.ship.workers={power:G.pl?G.pl.workers||1:1,fuel:0,bridge:0,workshop:0};
+    // Первая инициализация: все рабочие идут в свободный пул
+    G.ship.workers={power:0,fuel:0,bridge:0,workshop:0};
+    if(G.pl)G.pl.freeWorkers=G.pl.workers||0;
   }
   if(!G.ship.craftQueue){G.ship.craftQueue=[];}
-  // Sanity: общая сумма должна равняться G.pl.workers; если нет — корректируем power.
-  const sum=G.ship.workers.power+G.ship.workers.fuel+G.ship.workers.bridge+G.ship.workers.workshop;
-  const total=G.pl?G.pl.workers||sum:sum;
-  if(sum!==total){
-    const delta=total-sum;
-    G.ship.workers.power=Math.max(0,G.ship.workers.power+delta);
-  }
+  if(G.pl&&G.pl.freeWorkers==null)G.pl.freeWorkers=0;
 }
 
-// Helper: add one new worker to the ship, placing them in the first room with <5 workers.
-// Preferred order: power → workshop → fuel → bridge.
+// Helper: новый рабочий идёт в свободный пул — игрок назначает вручную.
 function addWorkerToShip(G){
   ensureShipWorkers(G);
-  const w=G.ship.workers;
-  for(const r of ['power','workshop','fuel','bridge']){
-    if(w[r]<5){w[r]++;return;}
-  }
-  w.power++; // all rooms at cap — still add (shouldn't happen normally)
+  G.pl.freeWorkers=(G.pl.freeWorkers||0)+1;
 }
 
-// ★ Phase 2.4: перемещение 1 рабочего между комнатами (used by ship UI).
-//   delta=+1 — взять у самой «густой» (>0) другой комнаты и положить сюда.
-//   delta=-1 — отдать в Power (или Fuel если room уже Power).
+// Перемещение рабочего: + берёт из свободного пула, − возвращает в пул.
 function reallocWorkers(G,room,delta){
   ensureShipWorkers(G);
   const w=G.ship.workers;
   if(delta>0){
-    if(w[room]>=5)return false; // лимит 5 рабочих на отсек
-    let donor=null,maxC=0;
-    for(const r of ['power','fuel','bridge','workshop']){
-      if(r===room)continue;
-      if(w[r]>maxC){maxC=w[r];donor=r;}
-    }
-    if(donor){w[donor]--;w[room]++;return true;}
-    return false;
+    if(w[room]>=5)return false;
+    if((G.pl.freeWorkers||0)<=0)return false; // нет свободных рабочих
+    G.pl.freeWorkers--;w[room]++;return true;
   }
   if(w[room]<=0)return false;
-  const recipient=room==='power'?'fuel':'power';
-  if(w[recipient]>=5)return false;
-  w[room]--;w[recipient]++;
+  w[room]--;G.pl.freeWorkers=(G.pl.freeWorkers||0)+1;
   return true;
 }
 
