@@ -326,6 +326,14 @@ function drwTinaBoss(b){
     const intensity=eT<540?(eT-60)/480*2.5:eT<1020?2.5+(eT-540)/480*3.5:6.0;
     shakeOff=intensity;
   }
+  // Сильная тряска Тины во время фазового перехода — эпичнее при входе в режим ярости (phase 4)
+  if(b.phaseTransition){
+    const pT=b.phaseTransition;
+    const prog=pT.t/pT.duration;
+    const ramp=prog<0.5?prog*2:(1-prog)*2;
+    const peak=pT.toPhase===4?10:pT.toPhase===3?6:4;
+    shakeOff=Math.max(shakeOff,ramp*peak);
+  }
   const x=(b.x+(Math.random()-.5)*shakeOff)|0;
   const y=(b.y+(Math.random()-.5)*shakeOff)|0;
   const t=b.t||0;
