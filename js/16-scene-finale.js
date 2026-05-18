@@ -2059,7 +2059,8 @@ function drwFinaleTina(G){
       for(let i=0;i<5;i++){_tri(i,0);_tri(i-1,1);_tri(i-1,-1);}
       _tri(4,0);_tri(3,1);_tri(3,-1);_tri(2,2);_tri(2,-2);
       cx.globalAlpha=1;
-      if(eP.starWaitT>120&&eP.starWaitT%90===0)bip(660,.18,.15,'sine',880,440);
+      // Звуковой хинт только если игрок стоит/едва движется — иначе спам каждые 1.5с
+      if(eP.starWaitT>120&&eP.starWaitT%90===0&&Math.hypot(G.pl.vx,G.pl.vy)<0.3)bip(660,.18,.15,'sine',880,440);
     }
   }
 
