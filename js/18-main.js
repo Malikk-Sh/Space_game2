@@ -96,7 +96,7 @@ function drwMenu(G){
   if(t>110){cx.globalAlpha=Math.min(1,(t-110)/25);txcs('ТЫ - ПОСЛЕДНИЙ ШАНС СИСТЕМЫ.',LH/2+18,'#ffdd88','#332200',1);cx.globalAlpha=1;}
   if(t>145){const pulse=.7+.3*Math.sin(t*.18);cx.globalAlpha=pulse;const msg=USE_TOUCH_UI?'ТАП - НАЧАТЬ':'ENTER - НАЧАТЬ';txcs(msg,LH-22,P.YEL,P.BLK,1);cx.globalAlpha=1;}
   txt(USE_TOUCH_UI?'TOUCH':'WASD+SPACE',2,LH-7,P.S3,1);
-  txt('V0.7 CHAPTER1',LW-72,LH-7,P.S3,1);
+  txt('V0.9 CHAPTER1',LW-72,LH-7,P.S3,1);
   drawTrans();
 }
 

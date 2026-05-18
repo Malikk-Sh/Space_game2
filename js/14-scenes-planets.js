@@ -538,8 +538,8 @@ function drwPlanetDrosh(G){
     txs('[S] ВЗЛЁТ ГОТОВ!',200,3,P.GRN,P.BLK,1);cx.globalAlpha=1;
     if(USE_TOUCH_UI){const lb=getBtn('launch');if(lb)lb.hidden=true;}
   }
-  // TAB справа
-  txt(USE_TOUCH_UI?'[S]':'TAB',LW-20,3,P.UIT2,1);
+  // TAB справа (с отступом под иконку паузы)
+  txt(USE_TOUCH_UI?'[S]':'TAB',PAUSE_ICON_X-gw('TAB')-2,3,P.UIT2,1);
 
   // === ТЕРМОИНДИКАТОР НАД ИГРОКОМ ===
   // Маленькая шкала тепла парит над головой персонажа (без иконки).
@@ -1639,7 +1639,7 @@ function drwPlanetBubblika(G){
   drwNotif(G);
 
   // HUD
-  rc(0,0,LW,16,P.UIB);rc(0,15,LW,1,P.DIM);txs('БУББЛИКА',4,3,P.BUB3,P.BLK,1);txt('КР:'+G.pl.cr,55,3,P.YEL,1);txt('РЕ:'+G.pl.res,95,3,P.RES,1);txt('ХП:'+Math.floor(G.pl.hp),130,3,P.RED,1);
+  rc(0,0,LW,16,P.UIB);rc(0,15,LW,1,P.DIM);txs('БУББЛИКА',4,3,P.BUB3,P.BLK,1);txt('ХП:'+Math.floor(G.pl.hp),60,3,P.RED,1);txt('КР:'+G.pl.cr,100,3,P.YEL,1);txt('РЕ:'+G.pl.res,134,3,P.RES,1);
 
   // ★ v16 r9 #4: Кнопка взлёта убрана из интерфейса игрока (только в корабле)
   {const lb=getBtn('launch');if(lb)lb.hidden=true;}
@@ -2174,7 +2174,7 @@ function drwPlanetKrasnozem(G){
 
   // HUD
   rc(0,0,LW,16,P.UIB);rc(0,15,LW,1,P.DIM);
-  txs('КРАСНОЗЁМ',4,3,P.KRZ3,P.BLK,1);txt('ХП:'+Math.floor(G.pl.hp),60,3,P.RED,1);txt('КР:'+G.pl.cr,90,3,P.YEL,1);
+  txs('КРАСНОЗЁМ',4,3,P.KRZ3,P.BLK,1);txt('ХП:'+Math.floor(G.pl.hp),60,3,P.RED,1);txt('КР:'+G.pl.cr,100,3,P.YEL,1);
 
   const alive=KZ.scavengers.filter(s=>s.alive).length;
   // Прогресс квеста (снаряды, хищники) теперь в правой верхней плашке (drwQuestPanel)
@@ -2186,7 +2186,7 @@ function drwPlanetKrasnozem(G){
     txs('[S] ВЗЛЁТ ГОТОВ!',152,3,P.GRN,P.BLK,1);cx.globalAlpha=1;
   }
   if(USE_TOUCH_UI){const lb=getBtn('launch');if(lb)lb.hidden=true;}
-  txt(USE_TOUCH_UI?'S]КОР':'[TAB]КОРАБЛЬ',LW-54,10,P.UIT2,1);
+  txt(USE_TOUCH_UI?'S]КОР':'[TAB]КОРАБЛЬ',PAUSE_ICON_X-gw('[TAB]КОРАБЛЬ')-3,10,P.UIT2,1);
   drwQuestPanel(G);
   drwAlienBriefing(G);
   drwPauseIcon();drwJoystick();drwActionBtns();drwFTX();drawFlash();if(G.paused)drwPauseOverlay(G);drawTrans();

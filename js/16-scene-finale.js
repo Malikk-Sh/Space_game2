@@ -2033,7 +2033,7 @@ function drwFinaleTina(G){
         rc(40,28,240,8,'#001833');
         rc(40,28,(240*(ebsAlive/3))|0,8,P.CYA);
         cx.strokeStyle=P.CYA;cx.lineWidth=.5;cx.strokeRect(40,28,240,8);
-        txs('НЕУЯЗВИМА',(LW-gw('НЕУЯЗВИМА'))/2,29,'#003344',P.BLK,1);
+        txs('НЕУЯЗВИМА',((LW-gw('НЕУЯЗВИМА'))/2)|0,29,P.WHT,'#003344',1);
       }
       txcs('ТИНА - СФЕРА ДАЙСОНА',19,P.TINA2,P.BLK,1);
       cx.globalAlpha=1;
@@ -2045,13 +2045,15 @@ function drwFinaleTina(G){
   if(F.battleActive&&F.tina&&F.tina.emergencyProtocol&&F.tina.emergencyProtocol.starWaiting){
     const eP=F.tina.emergencyProtocol;
     const Tn=F.tina;
-    const dx=Tn.x-G.pl.x, dy=Tn.y-G.pl.y;
+    const sp=worldToScreen(F,G.pl.x,G.pl.y);
+    const st=worldToScreen(F,Tn.x,Tn.y);
+    const dx=st.x-sp.x, dy=st.y-sp.y;
     const dist=Math.hypot(dx,dy);
-    if(dist>40){
+    if(dist>20){
       const ang=Math.atan2(dy,dx);
       const r=18+3*Math.sin(eP.starWaitT*.2);
-      const ax=G.pl.x+Math.cos(ang)*r;
-      const ay=G.pl.y+Math.sin(ang)*r;
+      const ax=sp.x+Math.cos(ang)*r;
+      const ay=sp.y+Math.sin(ang)*r;
       cx.globalAlpha=.85;
       const ca=Math.cos(ang),sa=Math.sin(ang);
       const _tri=(dxp,dyp)=>{const x=ax+dxp*ca-dyp*sa,y=ay+dxp*sa+dyp*ca;cx.fillRect(x|0,y|0,1,1);};
