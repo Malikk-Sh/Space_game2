@@ -1514,13 +1514,14 @@ const _MAP_PLANETS=[
 ];
 
 function _mapIsUnlocked(G,planetId){
-  // Используем постоянные флаги campaignState (не G.droshDone — он перезаписывается каждый кадр)
-  const fl=G.campaignState&&G.campaignState.flags||{};
-  const inv=G.campaignState&&G.campaignState.inventory||{};
+  // Звёздная карта открывается только после прохождения Дроша — значит Бубблика всегда доступна
+  const fl=(G.campaignState&&G.campaignState.flags)||{};
+  const inv=(G.campaignState&&G.campaignState.inventory)||{};
   if(planetId==='drosh')return true;
-  if(planetId==='bubblika')return !!(fl.droshSideDone||G.droshDone||inv.starMap);
-  if(planetId==='krasnozem')return !!(fl.bubSideDone||G.bubblikaDone);
-  if(planetId==='center')return !!G.krasDone;
+  // Бубблика: эта карта открывается только при starMap — значит Дрош пройден
+  if(planetId==='bubblika')return !!(inv.starMap||fl.droshSideDone||G.droshDone);
+  if(planetId==='krasnozem')return !!(inv.bubblikaContract||fl.bubSideDone||G.bubblikaDone);
+  if(planetId==='center')return !!(G.krasDone||fl.krzQuestStarted);
   return false;
 }
 
@@ -1657,9 +1658,9 @@ function drwShipMap(G){
       disc(px,py,sz,p.col);
       disc(px-1,py-1,sz-2,p.body);
     } else {
-      // Закрытая — затемнённая
-      cx.globalAlpha=.35;disc(px,py,sz,'#445566');cx.globalAlpha=1;
-      txs('?',px-1,py-2,'#aaaaaa',P.BLK,1);
+      // Закрытая — реальный цвет, но приглушённый (было: почти невидимый серый)
+      cx.globalAlpha=.38;disc(px,py,sz,p.col);cx.globalAlpha=1;
+      txs('?',px-2,py-3,'#ffcc88',P.BLK,1);
     }
     // Индикаторы статуса
     if(isCurrent){
