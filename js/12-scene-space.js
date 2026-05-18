@@ -789,10 +789,7 @@ function updSpace(G){
     if(d<12){
       G.pl.workers++;
       addWorkerToShip(G);
-      const isFirst=!G._reygarFirst;
-      G._reygarFirst=true;
-      const msg=isFirst?'ЗОРП ЗАВЕРБОВАЛ РЕЙГАРА!':'РЕЙГАР ПРИСОЕДИНИЛСЯ!';
-      fText(al.x,al.y-10,msg,P.PUR);
+      fText(al.x,al.y-10,'+РАБОЧИЙ',P.PUR);
       sfxPU();flash(.25,P.PUR);
       spPts(al.x,al.y,10,[P.PUR,'#aaeeff',P.WHT],.4,2,14);
       G.spaceAliens.splice(i,1);continue;

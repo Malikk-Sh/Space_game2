@@ -1514,10 +1514,12 @@ const _MAP_PLANETS=[
 ];
 
 function _mapIsUnlocked(G,planetId){
-  // Игрок может выбрать любую посещённую планету ИЛИ следующую по очереди
+  // Используем постоянные флаги campaignState (не G.droshDone — он перезаписывается каждый кадр)
+  const fl=G.campaignState&&G.campaignState.flags||{};
+  const inv=G.campaignState&&G.campaignState.inventory||{};
   if(planetId==='drosh')return true;
-  if(planetId==='bubblika')return !!G.droshDone;
-  if(planetId==='krasnozem')return !!G.bubblikaDone;
+  if(planetId==='bubblika')return !!(fl.droshSideDone||G.droshDone||inv.starMap);
+  if(planetId==='krasnozem')return !!(fl.bubSideDone||G.bubblikaDone);
   if(planetId==='center')return !!G.krasDone;
   return false;
 }

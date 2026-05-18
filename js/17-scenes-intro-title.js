@@ -1252,11 +1252,14 @@ function devTeleport(G,dest){
   const fl=G.campaignState.flags;
   function ensureVisited(p){if(!vis.includes(p))vis.push(p);}
   function ensureCompleted(p){if(!comp.includes(p))comp.push(p);}
-  // Дрош → Бубблика → Краснозём prerequisites
-  if(dest==='bubblika'||dest==='krasnozem'||dest==='tina'){
+  // Дрош завершён (нужно для nav map даже при телепорте прямо на Дрош)
+  if(dest==='drosh'||dest==='bubblika'||dest==='krasnozem'||dest==='tina'){
     fl.droshSideDone=true;fl.droshQuestAccepted=true;
-    inv.laserBlueprint=true;G.droshDone=true;
-    ensureVisited('drosh');ensureCompleted('drosh');
+    inv.laserBlueprint=true;inv.starMap=true;G.droshDone=true;
+    ensureVisited('drosh');
+  }
+  if(dest==='bubblika'||dest==='krasnozem'||dest==='tina'){
+    ensureCompleted('drosh');
     G.campaignState.currentPlanet='drosh';
   }
   if(dest==='krasnozem'||dest==='tina'){
