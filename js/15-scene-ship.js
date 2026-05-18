@@ -1514,11 +1514,20 @@ const _MAP_PLANETS=[
 ];
 
 function _mapIsUnlocked(G,planetId){
-  // Игрок может выбрать любую посещённую планету ИЛИ следующую по очереди
+  // Игрок может выбрать любую посещённую планету ИЛИ следующую по очереди.
+  // Важно: опираемся на persist-данные кампании, а не только на runtime-флаги
+  // (например, G.droshDone может ещё не успеть синхронизироваться при входе в меню корабля).
+  const flags=(G.campaignState&&G.campaignState.flags)||{};
+  const completed=(G.campaignState&&G.campaignState.planetsCompleted)||[];
+
+  const droshUnlocked=!!(G.droshDone||flags.droshSideDone||completed.includes('drosh'));
+  const bubblikaUnlocked=!!(G.bubblikaDone||flags.bubSideDone||completed.includes('bubblika'));
+  const krasUnlocked=!!(G.krasDone||flags.krasSideDone||completed.includes('krasnozem'));
+
   if(planetId==='drosh')return true;
-  if(planetId==='bubblika')return !!G.droshDone;
-  if(planetId==='krasnozem')return !!G.bubblikaDone;
-  if(planetId==='center')return !!G.krasDone;
+  if(planetId==='bubblika')return droshUnlocked;
+  if(planetId==='krasnozem')return bubblikaUnlocked;
+  if(planetId==='center')return krasUnlocked;
   return false;
 }
 
